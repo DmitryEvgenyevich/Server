@@ -45,6 +45,32 @@ namespace Server.Tables
             return result!;
         }
 
+        async static public Task<HttpResponseMessage> UpdateAuthStatus(string email, bool auth)
+        {
+            var supabase = await _getSupabaseClient();
+
+            var value = await supabase
+                    .From<Tables.Users>()
+                    .Where(x => x.Email == email)
+                    .Set(x => x.Auth, auth)
+                    .Update();
+
+            return value.ResponseMessage!;
+        }
+
+        async static public Task<Users> GetUserByEmail(string email)
+        {
+            var supabase = await _getSupabaseClient();
+
+            var result = await supabase
+                .From<Users>()
+                .Select(y => (new object[] { y.Id, y.Avatar, y.Username }))
+                .Where(y => y.Email == email)
+                .Single();
+
+            return result!;
+        }
+
         async static public Task<Users> GetUserById(int id)
         {
             var supabase = await _getSupabaseClient();
@@ -95,10 +121,9 @@ namespace Server.Tables
                 .Single();
 
             return chat.user_id;
-
         }
 
-        async static public Task<Users> GetUserByEmailAndPasswordIsRight(string email, string password)
+        async static public Task<Users> GetUserByEmailAndPassword(string email, string password)
         {
             var supabase = await _getSupabaseClient();
 
