@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Server.Message;
 using Server.Tables;
+using Server.GlobalUtils;
 using Supabase;
 
 namespace Server
@@ -21,16 +22,17 @@ namespace Server
             AutoConnectRealtime = true
         };
 
-        static Dictionary<string, TcpClient> clients = new Dictionary<string, TcpClient>();
+        private static Dictionary<string, TcpClient> _onlineClients = new Dictionary<string, TcpClient>();
 
-        static async Task Main(string[] args)
+        private static async Task Main(string[] args)
         {
             await _startServerAsync();
-        }
+        }//refacted
 
         static async Task _startServerAsync()
         {
             TcpListener serverSocket = new TcpListener(IPAddress.Any, 8000);
+            
             try
             {
                 serverSocket.Start();
@@ -50,40 +52,7 @@ namespace Server
             {
                 serverSocket.Stop();
             }
-        }
-
-        static void _deleteUserFromList(TcpClient clientSocket)
-        {
-            try
-            {
-                string key = clients.FirstOrDefault(x => x.Value == clientSocket).Key;
-                clients.Remove(key);
-            }
-            catch (Exception ex2)
-            {
-                Console.WriteLine("Error: " + ex2.Message);
-            }
-        }
-
-        static async Task _waitingForReqest(NetworkStream stream, TcpClient clientSocket)
-        {
-            int bytesRead;
-            byte[] buffer = new byte[256];
-
-            try
-            {
-                while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
-                {
-                    Response response = await _processCommand(_convertToString(buffer, bytesRead), clientSocket);
-                    await _sendRequest(stream, response);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-                await _sendRequest(stream, new Response { ErrorMessage = ex.Message } );
-            }
-        }
+        }//refacted
 
         static async void _handleClient(TcpClient clientSocket)
         {
@@ -93,24 +62,73 @@ namespace Server
 
                 using (var stream = clientSocket.GetStream())
                 {
-                    await _waitingForReqest(stream, clientSocket);
+                    await _waitingForRequest(stream, clientSocket);
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Error: " + ex.Message);
-                _deleteUserFromList(clientSocket);
+                _deleteUserFromOnlineList(clientSocket);
             }
             finally
             {
                 Console.WriteLine("Client disconnected.");
             }
-        }
+        }//refacted
 
-        static string _convertToString(byte[] buffer, int bytesRead)
+        static void _deleteUserFromOnlineList(TcpClient clientSocket)
         {
-            return Encoding.ASCII.GetString(buffer, 0, bytesRead);
-        }
+            try
+            {
+                string key = _onlineClients.FirstOrDefault(x => x.Value == clientSocket).Key;
+                _onlineClients.Remove(key);
+            }
+            catch (Exception ex2)
+            {
+                Console.WriteLine("Error: " + ex2.Message);
+            }
+        } //refacted
+
+        static async Task _waitingForRequest(NetworkStream stream, TcpClient clientSocket)
+        {
+            int bytesRead;
+            byte[] buffer = new byte[512];
+
+            try
+            {
+                while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                {
+                    Response response = await _tryToGetCommand(GlobalUtils.GlobalUtils.ConvertBytesToString(buffer, bytesRead), clientSocket);
+                    await _sendRequest(stream, response);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                await _sendRequest(stream, new Response { ErrorMessage = ex.Message });
+            }
+        }//refacted
+
+        static async Task<Response> _tryToGetCommand(string json, TcpClient clientSocket)
+        {
+            try
+            {
+                string command = GlobalUtils.GlobalUtils.TryToGetCommandFromJson(json, "Command").ToString();
+
+                if (GlobalUtils.GlobalUtils.isStringEmpty(command))
+                {
+                    return new Response { ErrorMessage = "Can not find this proparty" };
+                }
+
+                return await _findCommand(json, clientSocket, command);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: " + ex.Message);
+
+                return new Response { ErrorMessage = ex.Message };
+            }
+        }//refacted
 
         static async Task _sendRequest(NetworkStream stream, IMessage message)
         {
@@ -125,97 +143,92 @@ namespace Server
 
             await stream.WriteAsync(bytes, 0, bytes.Length);
             await stream.FlushAsync();
-        }
-
-        static async Task<Response> _processCommand(string json, TcpClient clientSocket)
-        {
-            try
-            {
-                string nameElement = GlobalUtils.GlobalUtils._tryToGetCommandFromJson(json, "Command");
-
-                if (nameElement.ToString() == string.Empty)
-                    return new Response { ErrorMessage = "Can not find this proparty" };
-
-                return await _findCommand(json, clientSocket, nameElement);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error: " + ex.Message);
-                return new Response { ErrorMessage = ex.Message };
-            }
-        }
+        }//refacted
 
         private static async Task<Response> _findCommand(string json, TcpClient clientSocket, string nameElement)
         {
             switch (nameElement)
             {
                 case "SignIn":
-                    return await signIn(clientSocket, json);
+                    return await _signIn(clientSocket, json);
 
                 case "SignUp":
-                    return await signUp(clientSocket, json);
+                    return await _signUp(json);
 
                 case "ForgotPassword":
-                    return await _forgotPassword(clientSocket, json);
+                    //return await _forgotPassword(json);
 
                 case "SendMessage":
-                    return await _sendMessage(clientSocket, json);
+                    //return await _sendMessage(json);
                 
                 case "SendNewCode":
-                    return await _sendNewCode(clientSocket, json);
+                    return await _sendNewCode(json);
                 
                 case "AuthSucces":
                     return await _authSucces(clientSocket, json);
 
                 case "GetMyContacts":
-                    return await _getMyContacts(clientSocket, json);
+                    return await _getMyContacts(json);
 
                 case "GetMessagesByContact":
-                    return await _getMessagesByContact(clientSocket, json);
+                    //return await _getMessagesyContact(json);
 
                 case "logOut":
-                    return _logOut(clientSocket, json);
+                    return await Task.Run(Response () => { return _logOut(clientSocket); });
 
                 default:
                     return new Response { ErrorMessage = "Can not find this proparty" };
             }
-        }
-        
-        static async Task<Response> signIn(TcpClient clientSocket, string json)
+        }//refacted
+
+        static async Task<Response> _signIn(TcpClient clientSocket, string json)
         {
             try
             {
-                Tables.Users user = JsonConvert.DeserializeObject<Tables.Users>(json)!;
+                var user = JsonConvert.DeserializeObject<Tables.Users>(json);
 
-                var result = await DB.GetUserByEmailAndPasswordIsRight(user.Email, user.Password);
+                var result = await DB.GetUserByEmailAndPassword(user?.Email!, user?.Password!);
 
                 if(result?.Id == null)
                     return new Response { ErrorMessage = "We can not to find your user, Email or password is not right" };
 
-                clients.Add(result.Username, clientSocket);
+                _onlineClients.Add(result.Username, clientSocket);
                 return new Response { Data = JsonConvert.SerializeObject(result) };
             }
             catch (Exception ex)
             {
                 return new Response { ErrorMessage = ex.Message };
             }
-        }
+        }//refacted
 
-        static async Task<Response> _getMyContacts(TcpClient clientSocket, string json)
+        static async Task<Response> _signUp(string json)
         {
             try
             {
-                Tables.Users user = JsonConvert.DeserializeObject<Tables.Users>(json)!;
+                var myObject = JsonConvert.DeserializeObject<Tables.Users>(json);
+                HttpResponseMessage httpResponse = await DB.InsertUserToTableUsers(myObject!); //// TO DO
 
-                var myUser = await DB.GetUserIdByEmail(user.Email);
+                return new Response { };
+            }
+            catch (Exception ex)
+            {
+                return GlobalUtils.GlobalUtils.GetErrorMessage(ex);
+            }
+        }//TO DO
 
-                var chats = await DB.GetChatsByUserId(myUser.Id);
+        static async Task<Response> _getMyContacts(string json)
+        {
+            try
+            {
+                var user = JsonConvert.DeserializeObject<Tables.Users>(json);
+
+                var chats = await DB.GetChatsByUserId(user!.Id);
 
                 List<UsersJoinUserChatsUsers> contacts = new List<UsersJoinUserChatsUsers>();
 
                 foreach (UserChatUsers chat in chats)
                 {
-                    var contactId = await DB.GetContactEmailByChatId(chat.user_chat_id, myUser.Id);
+                    var contactId = await DB.GetContactEmailByChatId(chat.user_chat_id, user.Id);
                     var contact = await DB.GetUserById(contactId);
 
                     contacts.Add(new UsersJoinUserChatsUsers
@@ -236,23 +249,7 @@ namespace Server
             }
         }
 
-        static async Task<Response> signUp(TcpClient clientSocket, string json)
-        {
-            try
-            {
-                Tables.Users myObject = JsonConvert.DeserializeObject<Tables.Users>(json)!;
-                await DB.InsertUserToTableUsers(myObject);
-
-
-                return new Response { };
-            }
-            catch (Exception ex) 
-            {
-                return GlobalUtils.GlobalUtils.GetErrorMessage(ex);
-            }
-        }
-
-        static async Task<Response> _sendNewCode(TcpClient clientSocket, string json)
+        static async Task<Response> _sendNewCode(string json)
         {
             try
             {
@@ -271,19 +268,15 @@ namespace Server
         {
             try
             {
-                var supabase = new Supabase.Client(supabaseUrl, supabaseKey, options);
-                await supabase.InitializeAsync();
-
                 Tables.Users myObject = JsonConvert.DeserializeObject<Tables.Users>(json)!;
 
-                var value = await supabase
-                    .From<Tables.Users>()
-                    .Where(x => x.Email == myObject.Email)
-                    .Set(x => x.Auth, myObject.Auth)
-                    .Update();
+                await DB.UpdateAuthStatus(myObject.Email, myObject.Auth);
 
-                clients.Add(myObject.Username, clientSocket);
-                return new Response { };
+                var user = await DB.GetUserByEmail(myObject.Email);
+                
+                _onlineClients.Add(user.Username, clientSocket);
+                
+                return new Response { Data = JsonConvert.SerializeObject(user) };
             }
             catch (Exception ex)
             {
@@ -291,7 +284,7 @@ namespace Server
             }
         }
 
-        static async Task<Response> _forgotPassword(TcpClient clientSocket, string json)
+        static async Task<Response> _forgotPassword(string json)
         {
             try
             {
@@ -315,7 +308,7 @@ namespace Server
             }
         }
 
-        static async Task<Response> _sendMessage(TcpClient clientSocket, string json)
+        static async Task<Response> _sendMessage(string json)
         {
             try
             {
@@ -326,6 +319,21 @@ namespace Server
                 myObject.FileId = null;
                 await DB.InsertMessageToTableMessages(myObject);
 
+                int userId = await DB.GetContactEmailByChatId(myObject.UserChatId, myObject.SenderId);
+                var user = await DB.GetUserById(userId);
+
+                try
+                {
+                    TcpClient clientSocket;
+                    _onlineClients.TryGetValue(user.Username, out clientSocket);
+                    var stream = clientSocket?.GetStream();
+                    await _sendRequest(stream!, new Notification { Type = "new message" });
+                }
+                catch
+                {
+
+                }
+
                 return new Response { };
             }
             catch (Exception ex)
@@ -334,7 +342,7 @@ namespace Server
             }
         }
 
-        static async Task<Response> _getMessagesByContact(TcpClient clientSocket, string json)
+        static async Task<Response> _getMessagesByContact(string json)
         {
             try
             {
@@ -371,21 +379,21 @@ namespace Server
             }
         }
 
-        static Response _logOut(TcpClient clientSocket, string json)
+        static Response _logOut(TcpClient clientSocket)
         {
             try 
             { 
-                string key = clients.FirstOrDefault(x => x.Value == clientSocket).Key;
-                clients.Remove(key);
+                string key = _onlineClients.FirstOrDefault(x => x.Value == clientSocket).Key;
+                _onlineClients.Remove(key);
                 Console.WriteLine("Client disconnected.");
-                return new Response { Data = "_logOut" };
+                return new Response { };
             }
             catch (Exception ex) 
             {
                 Console.WriteLine(ex.Message);
                 return new Response { ErrorMessage = ex.Message };
             }
-        }
+        } //refacted
 
     }
 }

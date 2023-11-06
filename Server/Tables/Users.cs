@@ -26,7 +26,7 @@ namespace Server.Tables
         public string Avatar { get; set; }
 
         [Column("auth")]
-        public string Auth { get; set; }
+        public bool Auth { get; set; }
         
         [Column("auth_code")]
         public int Auth_code { get; set; }

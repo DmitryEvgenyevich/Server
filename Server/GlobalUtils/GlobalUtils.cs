@@ -10,7 +10,7 @@ namespace Server.GlobalUtils
 {
     static class GlobalUtils
     {
-        public static string _tryToGetCommandFromJson(string json, string proparty)
+        public static string TryToGetCommandFromJson(string json, string proparty)
         {
             JsonDocument jsonDocument = JsonDocument.Parse(json);
             JsonElement root = jsonDocument.RootElement;
@@ -18,19 +18,30 @@ namespace Server.GlobalUtils
             return nameElement.ToString();
         }
 
-        static public Response GetErrorMessage(Exception ex)
+        public static Response GetErrorMessage(Exception ex)
         {
-            string error = _tryToGetCommandFromJson(ex.Message, "details");
+            string error = TryToGetCommandFromJson(ex.Message, "details");
 
             if (error.ToString() != string.Empty)
                 return new Response { ErrorMessage = error };
 
-            error = _tryToGetCommandFromJson(ex.Message, "message");
+            error = TryToGetCommandFromJson(ex.Message, "message");
 
             if (error.ToString() != string.Empty)
                 return new Response { ErrorMessage = ex.Message };
 
             return new Response { ErrorMessage = ex.Message };
         }
+
+        public static string ConvertBytesToString(byte[] buffer, int bytesRead)
+        {
+            return Encoding.ASCII.GetString(buffer, 0, bytesRead);
+        }
+
+        public static bool isStringEmpty(string str)
+        {
+            return str == string.Empty;
+        }
+
     }
 }
