@@ -176,6 +176,9 @@ namespace Server
                 case "logOut":
                     return await Task.Run(Response () => { return _logOut(clientSocket); });
 
+                case "CreateNewChat":
+                    return await _createNewChat(json);
+
                 default:
                     return new Response { ErrorMessage = "Can not find this proparty" };
             }
@@ -395,5 +398,33 @@ namespace Server
             }
         } //refacted
 
+        static async Task<Response> _createNewChat(string json)
+        {
+            try
+            {
+                var newChat = JsonConvert.DeserializeObject<Tables.NewChat>(json);
+
+                var supabase = new Supabase.Client(supabaseUrl, supabaseKey, options);
+                await supabase.InitializeAsync();
+
+                //var chat = await supabase
+                //    .From<Messages>()
+                //    .Select("users:sender_id(username), time, message")
+                //    .Where(x => x.UserChatId == chatId.UserChatId)
+                //    .Get();
+
+                var test1 = new UserChats { Id = 10};
+
+                var test = await supabase.From<UserChats>().Insert(test1);
+
+
+                // return new Response { Data = JsonConvert.SerializeObject(contact) };
+                return new Response();
+            }
+            catch (Exception ex)
+            {
+                return GlobalUtils.GlobalUtils.GetErrorMessage(ex);
+            }
+        }
     }
 }
