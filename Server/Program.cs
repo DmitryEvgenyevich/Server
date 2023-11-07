@@ -27,8 +27,8 @@ namespace Server
 
         private static async Task Main(string[] args)
         {
-            //await _startServerAsync();
-            await _createNewChat("");
+            await _startServerAsync();
+           // await _createNewChat("");
         }//refacted
 
         static async Task _startServerAsync()
@@ -404,14 +404,22 @@ namespace Server
         {
             try
             {
-                var newChat = JsonConvert.DeserializeObject<Tables.NewChat>(json);
+                var dataForNewChat = JsonConvert.DeserializeObject<Tables.NewChat>(json);
 
                 var supabase = new Supabase.Client(supabaseUrl, supabaseKey, options);
                 await supabase.InitializeAsync();
 
-                await supabase.From<UserChats>().Insert(new UserChats());
+                var newChat = await supabase.From<UserChats>().Insert(new UserChats());
 
+                var recipient = await supabase.From<Users>().Select(x => new object[] { x.Id }).Where(x => x.Username == dataForNewChat.RecipientUsername).Single();
 
+                var models = new List<UserChatUsers>
+                {
+                    new UserChatUsers{user_chat_id = 7, user_id = dataForNewChat.SenderId},
+                    new UserChatUsers{user_chat_id = 7, user_id = recipient.Id}
+                };
+
+                var chats = await supabase.From<UserChatUsers>().Insert(models);
 
                 // return new Response { Data = JsonConvert.SerializeObject(contact) };
                 return new Response();
