@@ -8,6 +8,7 @@ using Server.Message;
 using Server.Tables;
 using Server.GlobalUtils;
 using Supabase;
+using Supabase.Gotrue;
 
 namespace Server
 {
@@ -26,7 +27,8 @@ namespace Server
 
         private static async Task Main(string[] args)
         {
-            await _startServerAsync();
+            //await _startServerAsync();
+            await _createNewChat("{\"RecipientUsername\": \"Dodo\", \"SenderId\": \"45\"}");
         }//refacted
 
         static async Task _startServerAsync()
@@ -175,6 +177,9 @@ namespace Server
 
                 case "logOut":
                     return await Task.Run(Response () => { return _logOut(clientSocket); });
+
+                case "CreateNewChat":
+                    return await _createNewChat(json);
 
                 default:
                     return new Response { ErrorMessage = "Can not find this proparty" };
@@ -395,5 +400,33 @@ namespace Server
             }
         } //refacted
 
+        static async Task<Response> _createNewChat(string json)
+        {
+            try
+            {
+                var dataForNewChat = JsonConvert.DeserializeObject<Tables.NewChat>(json);
+
+                var supabase = new Supabase.Client(supabaseUrl, supabaseKey, options);
+                await supabase.InitializeAsync();
+
+                var newChat = await supabase.From<UserChats>().Insert(new UserChats());
+
+                var recipient = await supabase.From<Users>().Select(x => new object[] { x.Id }).Where(x => x.Username == dataForNewChat.RecipientUsername).Single();
+
+                var models = new List<UserChatUsers>
+                {
+                    new UserChatUsers{user_chat_id = (int)newChat.Model.Id, user_id = dataForNewChat.SenderId},
+                    new UserChatUsers{user_chat_id = (int)newChat.Model.Id, user_id = recipient.Id}
+                };
+
+                var chats = await supabase.From<UserChatUsers>().Insert(models);
+
+                return new Response();
+            }
+            catch (Exception ex)
+            {
+                return GlobalUtils.GlobalUtils.GetErrorMessage(ex);
+            }
+        }
     }
 }
