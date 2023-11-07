@@ -8,6 +8,7 @@ using Server.Message;
 using Server.Tables;
 using Server.GlobalUtils;
 using Supabase;
+using Supabase.Gotrue;
 
 namespace Server
 {
@@ -26,7 +27,8 @@ namespace Server
 
         private static async Task Main(string[] args)
         {
-            await _startServerAsync();
+            //await _startServerAsync();
+            await _createNewChat("");
         }//refacted
 
         static async Task _startServerAsync()
@@ -407,15 +409,8 @@ namespace Server
                 var supabase = new Supabase.Client(supabaseUrl, supabaseKey, options);
                 await supabase.InitializeAsync();
 
-                //var chat = await supabase
-                //    .From<Messages>()
-                //    .Select("users:sender_id(username), time, message")
-                //    .Where(x => x.UserChatId == chatId.UserChatId)
-                //    .Get();
+                await supabase.From<UserChats>().Insert(new UserChats());
 
-                var test1 = new UserChats { Id = 10};
-
-                var test = await supabase.From<UserChats>().Insert(test1);
 
 
                 // return new Response { Data = JsonConvert.SerializeObject(contact) };
