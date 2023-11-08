@@ -9,6 +9,7 @@ using Server.Tables;
 using Server.GlobalUtils;
 using Supabase;
 using Supabase.Gotrue;
+using System;
 
 namespace Server
 {
@@ -331,7 +332,8 @@ namespace Server
                     TcpClient clientSocket;
                     _onlineClients.TryGetValue(user.Username, out clientSocket);
                     var stream = clientSocket?.GetStream();
-                    await _sendRequest(stream!, new Notification { Type = "new message" });
+                    if(stream != null)
+                        await _sendRequest(stream!, new Notification { Type = "new message" });
                 }
                 catch
                 {
@@ -410,7 +412,7 @@ namespace Server
 
                 var newChat = await supabase.From<UserChats>().Insert(new UserChats());
 
-                var recipient = await supabase.From<Users>().Select(x => new object[] { x.Id }).Where(x => x.Username == dataForNewChat.RecipientUsername).Single();
+                var recipient = await supabase.From<Users>().Select(x => new object[] { x.Id, x.Avatar, x.Last_login }).Where(x => x.Username == dataForNewChat.RecipientUsername).Single();
 
                 var models = new List<UserChatUsers>
                 {
@@ -420,7 +422,14 @@ namespace Server
 
                 var chats = await supabase.From<UserChatUsers>().Insert(models);
 
-                return new Response();
+                UsersJoinUserChatsUsers contact = new UsersJoinUserChatsUsers {
+                    Avatar = recipient.Avatar,
+                    ChatId = (int)newChat.Model.Id,
+                    LastLogin = recipient.Last_login,
+                    Username = dataForNewChat.RecipientUsername
+                };
+
+                return new Response { Data = JsonConvert.SerializeObject(contact) };
             }
             catch (Exception ex)
             {
