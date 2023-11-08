@@ -27,8 +27,7 @@ namespace Server
 
         private static async Task Main(string[] args)
         {
-            //await _startServerAsync();
-            await _createNewChat("{\"RecipientUsername\": \"Dodo\", \"SenderId\": \"45\"}");
+            await _startServerAsync();
         }//refacted
 
         static async Task _startServerAsync()
