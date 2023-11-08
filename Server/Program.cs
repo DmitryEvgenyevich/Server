@@ -158,11 +158,11 @@ namespace Server
                     return await _signUp(json);
 
                 case "ForgotPassword":
-                    //return await _forgotPassword(json);
+                    return await _forgotPassword(json);
 
                 case "SendMessage":
-                    //return await _sendMessage(json);
-                
+                    return await _sendMessage(json);
+
                 case "SendNewCode":
                     return await _sendNewCode(json);
                 
@@ -173,7 +173,7 @@ namespace Server
                     return await _getMyContacts(json);
 
                 case "GetMessagesByContact":
-                    //return await _getMessagesyContact(json);
+                    return await _getMessagesByContact(json);
 
                 case "logOut":
                     return await Task.Run(Response () => { return _logOut(clientSocket); });
