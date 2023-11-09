@@ -5,11 +5,9 @@ using System.Text.Json;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Server.Message;
-using Server.Tables;
-using Server.GlobalUtils;
+using Server.Tables;    
 using Supabase;
-using Supabase.Gotrue;
-using System;
+using static Postgrest.Constants;
 
 namespace Server
 {
@@ -181,6 +179,9 @@ namespace Server
                 case "CreateNewChat":
                     return await _createNewChat(json);
 
+                case "FindUserByUsername":
+                    return await _findUserByUsername(json);
+
                 default:
                     return new Response { ErrorMessage = "Can not find this proparty" };
             }
@@ -333,7 +334,7 @@ namespace Server
                     _onlineClients.TryGetValue(user.Username, out clientSocket);
                     var stream = clientSocket?.GetStream();
                     if(stream != null)
-                        await _sendRequest(stream!, new Notification { Type = "new message" });
+                        await _sendRequest(stream!, new Notification { Data = "New message, " + myObject.Message });
                 }
                 catch
                 {
@@ -436,5 +437,38 @@ namespace Server
                 return GlobalUtils.GlobalUtils.GetErrorMessage(ex);
             }
         }
+
+        static async Task<Response> _findUserByUsername(string json)
+        {
+            try
+            {   
+                var data = JsonConvert.DeserializeObject<Tables.Users>(json);
+
+                var supabase = new Supabase.Client(supabaseUrl, supabaseKey, options);
+                await supabase.InitializeAsync();
+
+                var users = await supabase.From<Users>()
+                  .Filter(x => x.Username, Operator.ILike, data.Username + "%")
+                  .Where(x => x.Id != data.Id)
+                  .Limit(5)
+                  .Get();
+
+                var jsonArray = JArray.Parse(users.Content);
+                List<Users> findUsers = new List<Users>();
+
+                // Пройтись по каждому элементу массива
+                foreach (var item in jsonArray)
+                {
+                    findUsers.Add(new Users { Username = item["username"].ToString() });
+                }
+
+                return new Response { Data = JsonConvert.SerializeObject(findUsers) };
+            }
+            catch (Exception ex)
+            {
+                return GlobalUtils.GlobalUtils.GetErrorMessage(ex);
+            }
+        }
+
     }
 }
