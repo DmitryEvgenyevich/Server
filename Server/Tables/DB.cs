@@ -142,7 +142,6 @@ namespace Server.Tables
         async static public Task<HttpResponseMessage> InsertUserToTableUsers(Users user)
         {
             var supabase = await _getSupabaseClient();
-            var test = await supabase.From<Users>().Insert(user!);
 
             return (await supabase.From<Users>().Insert(user!)).ResponseMessage!;
         }

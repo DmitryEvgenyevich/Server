@@ -7,6 +7,7 @@ using Newtonsoft.Json.Linq;
 using Server.Message;
 using Server.Tables;    
 using Supabase;
+using Supabase.Gotrue;
 using static Postgrest.Constants;
 
 namespace Server
@@ -198,7 +199,9 @@ namespace Server
                 if(result?.Id == null)
                     return new Response { ErrorMessage = "We can not to find your user, Email or password is not right" };
 
-                _onlineClients.Add(result.Username, clientSocket);
+                if (result.Auth)
+                    _onlineClients.Add(result.Username, clientSocket);
+                
                 return new Response { Data = JsonConvert.SerializeObject(result) };
             }
             catch (Exception ex)
@@ -328,17 +331,23 @@ namespace Server
                 int userId = await DB.GetContactEmailByChatId(myObject.UserChatId, myObject.SenderId);
                 var user = await DB.GetUserById(userId);
 
-                try
-                {
-                    TcpClient clientSocket;
-                    _onlineClients.TryGetValue(user.Username, out clientSocket);
-                    var stream = clientSocket?.GetStream();
-                    if(stream != null)
-                        await _sendRequest(stream!, new Notification { Data = "New message, " + myObject.Message });
-                }
-                catch
-                {
+                TcpClient clientSocket;
+                _onlineClients.TryGetValue(user.Username, out clientSocket);
+                var stream = clientSocket?.GetStream();
 
+
+                if (stream != null)
+                {
+                    var dataForRecipient = new
+                    {
+                        Command = "NewMessage",
+                        Time = myObject.Time,
+                        Message = myObject.Message,
+                        ChatId = myObject.UserChatId,
+                        Username = (await DB.GetUserById(myObject.SenderId)).Username
+                    };
+
+                    await _sendRequest(stream!, new Notification { Data = JsonConvert.SerializeObject(dataForRecipient) });
                 }
 
                 return new Response { };
@@ -429,6 +438,22 @@ namespace Server
                     LastLogin = recipient.Last_login,
                     Username = dataForNewChat.RecipientUsername
                 };
+
+                TcpClient clientSocket;
+                _onlineClients.TryGetValue(dataForNewChat.RecipientUsername, out clientSocket);
+                var stream = clientSocket?.GetStream();
+                
+                if (stream != null)
+                {
+                    var userData = await DB.GetUserById(dataForNewChat.SenderId);
+                    var dataForRecipient = new
+                    {
+                        Command = "NewChat",
+                        Username = userData.Username,
+                        ChatId = (int)newChat.Model.Id
+                    };
+                    await _sendRequest(stream!, new Notification { Data = JsonConvert.SerializeObject(dataForRecipient) });
+                }
 
                 return new Response { Data = JsonConvert.SerializeObject(contact) };
             }
