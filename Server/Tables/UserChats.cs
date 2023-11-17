@@ -11,11 +11,8 @@ namespace Server.Tables
     [Table("user_chats")]
     class UserChats : BaseModel
     {
-        [PrimaryKey("id", false)]
+        [PrimaryKey("id", true)]
         public int? Id { get; set; }
-
-        [Column("lastmessage")]
-        public string? LastMessage { get; set; }
 
     }
 }

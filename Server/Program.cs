@@ -5,30 +5,19 @@ using System.Text.Json;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Server.Message;
-using Server.Tables;    
-using Supabase;
-using Supabase.Gotrue;
-using static Postgrest.Constants;
+using Server.Tables;
 
 namespace Server
 {
     class Server
     {
-        static string supabaseUrl = "https://xqtbulboyjkpozsnyttc.supabase.co";
-
-        static string supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxdGJ1bGJveWprcG96c255dHRjIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTIxMTM1MzcsImV4cCI6MjAwNzY4OTUzN30.qPD7zjTMELHmJV7Tkynn8WwyLFmh2uO0-_tU3EQk_H0";
-
-        static SupabaseOptions options = new SupabaseOptions
-        {
-            AutoConnectRealtime = true
-        };
-
         private static Dictionary<string, TcpClient> _onlineClients = new Dictionary<string, TcpClient>();
 
         private static async Task Main(string[] args)
         {
+            DB.DBinit();
             await _startServerAsync();
-        }//refacted
+        }
 
         static async Task _startServerAsync()
         {
@@ -53,7 +42,7 @@ namespace Server
             {
                 serverSocket.Stop();
             }
-        }//refacted
+        }
 
         static async void _handleClient(TcpClient clientSocket)
         {
@@ -75,7 +64,7 @@ namespace Server
             {
                 Console.WriteLine("Client disconnected.");
             }
-        }//refacted
+        }
 
         static void _deleteUserFromOnlineList(TcpClient clientSocket)
         {
@@ -88,7 +77,7 @@ namespace Server
             {
                 Console.WriteLine("Error: " + ex2.Message);
             }
-        } //refacted
+        }
 
         static async Task _waitingForRequest(NetworkStream stream, TcpClient clientSocket)
         {
@@ -108,7 +97,7 @@ namespace Server
                 Console.WriteLine(ex.Message);
                 await _sendRequest(stream, new Response { ErrorMessage = ex.Message });
             }
-        }//refacted
+        }
 
         static async Task<Response> _tryToGetCommand(string json, TcpClient clientSocket)
         {
@@ -129,7 +118,7 @@ namespace Server
 
                 return new Response { ErrorMessage = ex.Message };
             }
-        }//refacted
+        }
 
         static async Task _sendRequest(NetworkStream stream, IMessage message)
         {
@@ -144,7 +133,7 @@ namespace Server
 
             await stream.WriteAsync(bytes, 0, bytes.Length);
             await stream.FlushAsync();
-        }//refacted
+        }
 
         private static async Task<Response> _findCommand(string json, TcpClient clientSocket, string nameElement)
         {
@@ -169,7 +158,7 @@ namespace Server
                     return await _authSucces(clientSocket, json);
 
                 case "GetMyContacts":
-                    return await _getMyContacts(json);
+                    return await _getMyChats(json);
 
                 case "GetMessagesByContact":
                     return await _getMessagesByContact(json);
@@ -186,7 +175,7 @@ namespace Server
                 default:
                     return new Response { ErrorMessage = "Can not find this proparty" };
             }
-        }//refacted
+        }
 
         static async Task<Response> _signIn(TcpClient clientSocket, string json)
         {
@@ -208,7 +197,7 @@ namespace Server
             {
                 return new Response { ErrorMessage = ex.Message };
             }
-        }//refacted
+        }
 
         static async Task<Response> _signUp(string json)
         {
@@ -225,7 +214,7 @@ namespace Server
             }
         }//TO DO
 
-        static async Task<Response> _getMyContacts(string json)
+        static async Task<Response> _getMyChats(string json)
         {
             try
             {
@@ -237,13 +226,13 @@ namespace Server
 
                 foreach (UserChatUsers chat in chats)
                 {
-                    var contactId = await DB.GetContactEmailByChatId(chat.user_chat_id, user.Id);
+                    var contactId = await DB.GetContactEmailByChatId(chat.UserChatId, user.Id);
                     var contact = await DB.GetUserById(contactId);
 
                     contacts.Add(new UsersJoinUserChatsUsers
                     { 
                         Avatar = contact.Avatar, 
-                        ChatId = chat.user_chat_id, 
+                        ChatId = chat.UserChatId, 
                         LastLogin = contact.Last_login, 
                         Username = contact.Username 
                     });
@@ -297,17 +286,8 @@ namespace Server
         {
             try
             {
-                var supabase = new Supabase.Client(supabaseUrl, supabaseKey, options);
-                await supabase.InitializeAsync();
-
-                Tables.Users myObject = JsonConvert.DeserializeObject<Tables.Users>(json)!;
-
-                var value = await supabase
-                    .From<Tables.Users>()
-                    .Where(x => x.Email == myObject.Email)
-                    .Set(x => x.Auth, myObject.Auth)
-                    .Set(x => x.Password, myObject.Password)
-                    .Update();
+                var myObject = JsonConvert.DeserializeObject<Tables.Users>(json)!;
+                await DB.UpdatePassword(myObject);
 
                 return new Response { };
             }
@@ -321,12 +301,7 @@ namespace Server
         {
             try
             {
-                var supabase = new Supabase.Client(supabaseUrl, supabaseKey, options);
-                await supabase.InitializeAsync();
-
                 Tables.Messages myObject = JsonConvert.DeserializeObject<Tables.Messages>(json)!;
-                myObject.FileId = null;
-                await DB.InsertMessageToTableMessages(myObject);
 
                 int userId = await DB.GetContactEmailByChatId(myObject.UserChatId, myObject.SenderId);
                 var user = await DB.GetUserById(userId);
@@ -334,7 +309,6 @@ namespace Server
                 TcpClient clientSocket;
                 _onlineClients.TryGetValue(user.Username, out clientSocket);
                 var stream = clientSocket?.GetStream();
-
 
                 if (stream != null)
                 {
@@ -349,6 +323,10 @@ namespace Server
 
                     await _sendRequest(stream!, new Notification { Data = JsonConvert.SerializeObject(dataForRecipient) });
                 }
+
+                await DB.InsertMessageToTableMessages(myObject);
+
+                
 
                 return new Response { };
             }
@@ -366,16 +344,7 @@ namespace Server
 
                 List<ChatMessages> chatMessages = new List<ChatMessages>();
 
-                var supabase = new Supabase.Client(supabaseUrl, supabaseKey, options);
-                await supabase.InitializeAsync();
-
-                var messages = await supabase
-                    .From<Messages>()
-                    .Select("users:sender_id(username), time, message")
-                    .Where(x => x.UserChatId == chatId.UserChatId)
-                    .Get();
-
-                var jsonArray = JArray.Parse(messages.Content);
+                var jsonArray = JArray.Parse(await DB.GetMessages(chatId));
 
                 // Пройтись по каждому элементу массива
                 foreach (var item in jsonArray)
@@ -409,7 +378,7 @@ namespace Server
                 Console.WriteLine(ex.Message);
                 return new Response { ErrorMessage = ex.Message };
             }
-        } //refacted
+        } 
 
         static async Task<Response> _createNewChat(string json)
         {
@@ -417,20 +386,17 @@ namespace Server
             {
                 var dataForNewChat = JsonConvert.DeserializeObject<Tables.NewChat>(json);
 
-                var supabase = new Supabase.Client(supabaseUrl, supabaseKey, options);
-                await supabase.InitializeAsync();
+                var newChat = await DB.CreateNewChat();// maybe error TEST
 
-                var newChat = await supabase.From<UserChats>().Insert(new UserChats());
-
-                var recipient = await supabase.From<Users>().Select(x => new object[] { x.Id, x.Avatar, x.Last_login }).Where(x => x.Username == dataForNewChat.RecipientUsername).Single();
+                var recipient = await DB.GetUserByUsername(dataForNewChat.RecipientUsername);
 
                 var models = new List<UserChatUsers>
                 {
-                    new UserChatUsers{user_chat_id = (int)newChat.Model.Id, user_id = dataForNewChat.SenderId},
-                    new UserChatUsers{user_chat_id = (int)newChat.Model.Id, user_id = recipient.Id}
+                    new UserChatUsers{UserChatId = (int)newChat.Model.Id, UserId = dataForNewChat.SenderId},
+                    new UserChatUsers{UserChatId = (int)newChat.Model.Id, UserId = recipient.Id}
                 };
 
-                var chats = await supabase.From<UserChatUsers>().Insert(models);
+                var chats = await DB.CreateChatConnection(models);
 
                 UsersJoinUserChatsUsers contact = new UsersJoinUserChatsUsers {
                     Avatar = recipient.Avatar,
@@ -469,14 +435,7 @@ namespace Server
             {   
                 var data = JsonConvert.DeserializeObject<Tables.Users>(json);
 
-                var supabase = new Supabase.Client(supabaseUrl, supabaseKey, options);
-                await supabase.InitializeAsync();
-
-                var users = await supabase.From<Users>()
-                  .Filter(x => x.Username, Operator.ILike, data.Username + "%")
-                  .Where(x => x.Id != data.Id)
-                  .Limit(5)
-                  .Get();
+                var users = await DB.FindUsersByUsername(data);
 
                 var jsonArray = JArray.Parse(users.Content);
                 List<Users> findUsers = new List<Users>();

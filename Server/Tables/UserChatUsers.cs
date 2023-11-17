@@ -12,11 +12,17 @@ namespace Server.Tables
     class UserChatUsers : BaseModel
     {
 
-        [PrimaryKey("user_chat_id", true)]
-        public int user_chat_id { get; set; }
+        [PrimaryKey("UserChatId", true)]
+        public int UserChatId { get; set; }
 
-        [PrimaryKey("user_id", true)]
-        public int user_id { get; set; }
+        [PrimaryKey("UserId", true)]
+        public int UserId { get; set; }
+
+        [Column("LastMessage")]
+        public string? LastMessage { get; set; }
+
+        [Column("ChatName")]
+        public string? ChatName { get; set; }
 
     }
 }
