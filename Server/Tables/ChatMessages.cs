@@ -12,6 +12,6 @@ namespace Server.Tables
 
         public string? Message;
 
-        public DateTime Time;
+        public DateTimeOffset? Time;
     }
 }

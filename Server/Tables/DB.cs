@@ -17,9 +17,9 @@ namespace Server.Tables
 {
     static class DB
     {
-        static string supabaseUrl = "https://xqtbulboyjkpozsnyttc.supabase.co";
+        static string supabaseUrl = "https://tfggopkviuvatvbssgev.supabase.co";
 
-        static string supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxdGJ1bGJveWprcG96c255dHRjIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTIxMTM1MzcsImV4cCI6MjAwNzY4OTUzN30.qPD7zjTMELHmJV7Tkynn8WwyLFmh2uO0-_tU3EQk_H0";
+        static string supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRmZ2dvcGt2aXV2YXR2YnNzZ2V2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDAyNDc4ODgsImV4cCI6MjAxNTgyMzg4OH0.y7CsjBe31W072cYdZv6SgveBjVD4MrsAINLc8L2PZDI";
 
         static SupabaseOptions options = new SupabaseOptions
         {
@@ -68,7 +68,7 @@ namespace Server.Tables
         }
         async static public Task<Users> GetUserByUsername(string Username)
         {
-            var result = await supabase.From<Users>().Select(x => new object[] { x.Id, x.Avatar, x.Last_login }).Where(x => x.Username == Username).Single();
+            var result = await supabase.From<Users>().Select(x => new object[] { x.Id, x.Avatar, x.LastLogin }).Where(x => x.Username == Username).Single();
 
             return result!;
         }
@@ -94,7 +94,7 @@ namespace Server.Tables
             var value = await supabase
                 .From<Users>()
                 .Where(x => x.Email == email)
-                .Set(x => x.Auth_code, auth_code)
+                .Set(x => x.AuthCode, auth_code)
                 .Update();
 
             return value.ResponseMessage!;
@@ -104,22 +104,22 @@ namespace Server.Tables
         {
             var chats = await supabase
                 .From<UserChatUsers>()
-                .Select(x => new object[] { x.UserChatId,  })
+                .Select(x => new object[] { x.UserChatId })
                 .Where(x => x.UserId == Id)
                 .Get();
 
             return chats!.Models;
         }
 
-        async static public Task<int> GetContactEmailByChatId(int chatId, int userId)
+        async static public Task<string> GetContactEmailByChatId(int chatId, int userId)
         {
             var chat = await supabase
                 .From<UserChatUsers>()
-                .Select(x => new object[] { x.UserId })
+                .Select("Users:UserId(Id, Username, Avatar, LastLogin, Email), UserChats:UserChatId(LastMessage, ChatType, ChatName, Avatar)")
                 .Where(x => x.UserChatId == chatId && x.UserId != userId)
-                .Single();
+                .Get();
 
-            return chat!.UserId;
+            return chat!.Content;
         }
 
         async static public Task<Users> GetUserByEmailAndPassword(string email, string password)
@@ -173,7 +173,7 @@ namespace Server.Tables
         {
             var messages = await supabase
                     .From<Messages>()
-                    .Select("users:sender_id(username), time, message")
+                    .Select("Users:SenderId(Username), Time, Message")
                     .Where(x => x.UserChatId == myObject.UserChatId)
                     .Get();
 

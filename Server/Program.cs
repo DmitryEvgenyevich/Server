@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
@@ -16,6 +17,8 @@ namespace Server
         private static async Task Main(string[] args)
         {
             DB.DBinit();
+            await _getMyChats("{\r\n  \"Command\": \"GetMyContacts\",\r\n  \"Id\": 1\r\n}");
+            //"{\r\n  \"Command\": \"GetMyContacts\",\r\n  \"Id\": 1\r\n}"
             await _startServerAsync();
         }
 
@@ -220,26 +223,44 @@ namespace Server
             {
                 var user = JsonConvert.DeserializeObject<Tables.Users>(json);
 
-                var chats = await DB.GetChatsByUserId(user!.Id);
+                var chatsId = await DB.GetChatsByUserId(user!.Id);
 
-                List<UsersJoinUserChatsUsers> contacts = new List<UsersJoinUserChatsUsers>();
+                List<IChatGroupModels> chats = new List<IChatGroupModels>();
 
-                foreach (UserChatUsers chat in chats)
+                foreach (UserChatUsers chat in chatsId)
                 {
-                    var contactId = await DB.GetContactEmailByChatId(chat.UserChatId, user.Id);
-                    var contact = await DB.GetUserById(contactId);
-
-                    contacts.Add(new UsersJoinUserChatsUsers
-                    { 
-                        Avatar = contact.Avatar, 
-                        ChatId = chat.UserChatId, 
-                        LastLogin = contact.Last_login, 
-                        Username = contact.Username 
-                    });
+                    var jsonArray = JArray.Parse(await DB.GetContactEmailByChatId(chat.UserChatId, user.Id));
+                    
+                    foreach (var contact in jsonArray)
+                    {
+                        if ((ChatType)Enum.ToObject(typeof(ChatType), (int)(contact["UserChats"]["ChatType"])) == ChatType.Chat)
+                        {
+                            DateTimeOffset result;
+                            var temp = DateTimeOffset.TryParse(contact["Users"]?["LastLogin"]?.ToString(), out result);
+                            chats.Add(new ChatModel { ChatId = chat.UserChatId, Contact = new ContactModel { Avatar = contact["Users"]["Avatar"].ToString(), Email = contact["Users"]["Email"].ToString(), Id = ((int)contact["Users"]["Id"]), Username = contact["Users"]!["Username"]!.ToString(), LastLogin = temp ? result : null}, ChatName = contact["UserChats"]["ChatName"].ToString(), LastMessage = contact["UserChats"]["LastMessage"].ToString(), Type = (ChatType)Enum.ToObject(typeof(ChatType), ((int)contact["UserChats"]["ChatType"])) });
+                        }
+                        else if (((int)contact["UserChats"]["ChatType"]) == ((int)ChatType.Group))
+                        {
+                            bool test = true;
+                            foreach (var chatFromChats in chats)
+                            {
+                                if (chatFromChats.ChatId == chat.UserChatId && chatFromChats.GetType() == typeof(GroupModel))
+                                {
+                                    ((GroupModel)chatFromChats).ContactsInGroup.Add(new ContactModel { Avatar = contact["Users"]["Avatar"].ToString(), Email = contact["Users"]["Email"].ToString(), Id = ((int)contact["Users"]["Id"]), LastLogin = DateTimeOffset.Parse(contact["Users"]["LastLogin"].ToString()), Username = contact["Users"]!["Username"]!.ToString()});
+                                    test = false;
+                                    break;
+                                }
+                            }
+                            if(test)
+                            {
+                                ContactModel contact1 = new ContactModel { Avatar = contact["Users"]["Avatar"].ToString(), Email = contact["Users"]["Email"].ToString(), Id = ((int)contact["Users"]["Id"]), LastLogin = DateTimeOffset.Parse(contact["Users"]["LastLogin"].ToString()), Username = contact["Users"]!["Username"]!.ToString() };
+                                chats.Add(new GroupModel { ChatId = chat.UserChatId, Avatar = contact["UserChats"]["Avatar"].ToString(), ChatName = contact["UserChats"]["ChatName"].ToString(), ContactsInGroup = new List<ContactModel> { new ContactModel { Avatar = contact["Users"]["Avatar"].ToString(), Email = contact["Users"]["Email"].ToString(), Id = ((int)contact["Users"]["Id"]), LastLogin = DateTimeOffset.Parse(contact["Users"]["LastLogin"].ToString()), Username = contact["Users"]!["Username"]!.ToString() } }, LastMessage = contact["UserChats"]["LastMessage"].ToString(), Type = (ChatType)Enum.ToObject(typeof(ChatType), ((int)contact["UserChats"]["ChatType"])) });
+                            }
+                        }
+                    }
                 }
 
-                return new Response { Data = JsonConvert.SerializeObject(contacts) };
-
+                return new Response { Data = JsonConvert.SerializeObject(chats) };
             }
             catch (Exception ex)
             {
@@ -252,7 +273,7 @@ namespace Server
             try
             {
                 Tables.Users myObject = JsonConvert.DeserializeObject<Tables.Users>(json)!;
-                await DB.UpdateAuthCodeByEmail(myObject.Email, myObject.Auth_code);
+                await DB.UpdateAuthCodeByEmail(myObject.Email, myObject.AuthCode);
 
                 return new Response { };
             }
@@ -303,8 +324,8 @@ namespace Server
             {
                 Tables.Messages myObject = JsonConvert.DeserializeObject<Tables.Messages>(json)!;
 
-                int userId = await DB.GetContactEmailByChatId(myObject.UserChatId, myObject.SenderId);
-                var user = await DB.GetUserById(userId);
+                var userId = await DB.GetContactEmailByChatId(myObject.UserChatId, myObject.SenderId);
+                var user = await DB.GetUserById(1);
 
                 TcpClient clientSocket;
                 _onlineClients.TryGetValue(user.Username, out clientSocket);
@@ -348,11 +369,8 @@ namespace Server
 
                 // Пройтись по каждому элементу массива
                 foreach (var item in jsonArray)
-                {
-                    DateTimeOffset.TryParse(item["time"].ToString(), out DateTimeOffset result);
-                    DateTime dateTime = result.DateTime;
-
-                    chatMessages.Add(new ChatMessages { Message = item["message"].ToString(), Username = item["users"]["username"].ToString(), Time = dateTime });
+                {   
+                    chatMessages.Add(new ChatMessages { Message = item["Message"].ToString(), Username = item["Users"]["Username"].ToString(), Time = DateTimeOffset.Parse(item["Time"].ToString())});
                 }
 
                 return new Response { Data = JsonConvert.SerializeObject(chatMessages) };
@@ -385,7 +403,7 @@ namespace Server
             try
             {
                 var dataForNewChat = JsonConvert.DeserializeObject<Tables.NewChat>(json);
-
+                
                 var newChat = await DB.CreateNewChat();// maybe error TEST
 
                 var recipient = await DB.GetUserByUsername(dataForNewChat.RecipientUsername);
@@ -398,12 +416,12 @@ namespace Server
 
                 var chats = await DB.CreateChatConnection(models);
 
-                UsersJoinUserChatsUsers contact = new UsersJoinUserChatsUsers {
-                    Avatar = recipient.Avatar,
-                    ChatId = (int)newChat.Model.Id,
-                    LastLogin = recipient.Last_login,
-                    Username = dataForNewChat.RecipientUsername
-                };
+                //UsersJoinUserChatsUsers contact = new UsersJoinUserChatsUsers {
+                //    Avatar = recipient.Avatar,
+                //    ChatId = (int)newChat.Model.Id,
+                //    LastLogin = recipient.LastLogin,
+                //    ChatName = dataForNewChat.RecipientUsername
+                //};
 
                 TcpClient clientSocket;
                 _onlineClients.TryGetValue(dataForNewChat.RecipientUsername, out clientSocket);
@@ -421,7 +439,7 @@ namespace Server
                     await _sendRequest(stream!, new Notification { Data = JsonConvert.SerializeObject(dataForRecipient) });
                 }
 
-                return new Response { Data = JsonConvert.SerializeObject(contact) };
+                return new Response { Data = JsonConvert.SerializeObject("") };
             }
             catch (Exception ex)
             {
@@ -443,7 +461,7 @@ namespace Server
                 // Пройтись по каждому элементу массива
                 foreach (var item in jsonArray)
                 {
-                    findUsers.Add(new Users { Username = item["username"].ToString() });
+                    findUsers.Add(new Users { Username = item["Username"].ToString() });
                 }
 
                 return new Response { Data = JsonConvert.SerializeObject(findUsers) };

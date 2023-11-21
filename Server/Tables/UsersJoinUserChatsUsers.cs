@@ -1,19 +1,68 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Server.Tables
 {
-    public class UsersJoinUserChatsUsers
+    public enum ChatType
     {
-        public int ChatId;
-        
+        Chat = 1,
+        Group = 2
+    };
+
+    public class ContactModel
+    {
+        public int Id;
+
         public string? Username;
-        
+
+        public string? Email;
+
         public string? Avatar;
-        
-        public string? LastLogin;
+
+        public DateTimeOffset? LastLogin;
+    }
+
+    public interface IChatGroupModels
+    {
+        int ChatId { get; set; }
+
+        ChatType Type { get; set; }
+
+        public string ChatName { get; }
+
+        string? LastMessage { get; set; }
+    }
+
+    public class ChatModel : IChatGroupModels
+    {
+        public int ChatId { get; set; }
+
+        public string ChatName { get; set; }
+
+        public ContactModel Contact { get; set; }
+
+        public ChatType Type { get; set; } = ChatType.Chat;
+
+        public string? LastMessage { get; set; } = string.Empty;
+
+    }
+
+    public class GroupModel : IChatGroupModels
+    {
+        public int ChatId { get; set; }
+
+        public string ChatName { get; set; }
+
+        public List<ContactModel> ContactsInGroup { get; set; }
+
+        public ChatType Type { get; set; } = ChatType.Group;
+
+        public string Avatar { get; set; } = string.Empty;
+
+        public string? LastMessage { get; set; } = string.Empty;
     }
 }

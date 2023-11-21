@@ -6,28 +6,28 @@ namespace Server.Tables
     [Table("Messages")]
     internal class Messages : BaseModel
     {
-        [PrimaryKey("id", false)]
+        [PrimaryKey("Id", false)]
         public int Id { get; set; }
 
-        [Column("sender_id")]
+        [Column("SenderId")]
         public int SenderId { get; set; }
 
-        [Column("message")]
+        [Column("Message")]
         public string Message { get; set; }
 
-        [Column("time")]
+        [Column("Time")]
         public DateTime Time { get; set; }
 
-        [Column("user_chat_id")]
+        [Column("UserChatId")]
         public int UserChatId { get; set; }
 
-        [Column("status_message_id")]
+        [Column("StatusMessageId")]
         public int StatusMessageId { get; set; }
 
-        [Column("type_of_message_id")]
+        [Column("TypeOfMessageId")]
         public int TypeOfMessageId { get; set; } = 1;
 
-        [Column("file_id")]
+        [Column("FileId")]
         public int? FileId { get; set; }
     }
 }

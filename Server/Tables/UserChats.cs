@@ -8,11 +8,16 @@ using System.Threading.Tasks;
 
 namespace Server.Tables
 {
-    [Table("user_chats")]
+    [Table("UserChats")]
     class UserChats : BaseModel
     {
-        [PrimaryKey("id", true)]
-        public int? Id { get; set; }
+        [PrimaryKey("Id", false)]
+        public int Id { get; set; }
 
+        [Column("LastMessage")]
+        public string? LastMessage { get; set; }
+
+        [Column("ChatType")]
+        public ChatType? ChatType { get; set; }
     }
 }

@@ -3,33 +3,33 @@ using Postgrest.Models;
 
 namespace Server.Tables
 {
-    [Table("users")]
+    [Table("Users")]
     public class Users : BaseModel
     {
 
-        [PrimaryKey("id", false)]
+        [PrimaryKey("Id", false)]
         public int Id { get; set; }
 
-        [Column("username")]
+        [Column("Username")]
         public string Username { get; set; }
 
-        [Column("email")]
+        [Column("Email")]
         public string Email { get; set; }
 
-        [Column("password")]
+        [Column("Password")]
         public string Password { get; set; }
 
-        [Column("last_login")]
-        public string Last_login { get; set; }
+        [Column("LastLogin")]
+        public string LastLogin { get; set; }
 
-        [Column("avatar")]
+        [Column("Avatar")]
         public string Avatar { get; set; }
 
-        [Column("auth")]
+        [Column("Auth")]
         public bool Auth { get; set; }
         
-        [Column("auth_code")]
-        public int Auth_code { get; set; }
+        [Column("AuthCode")]
+        public int AuthCode { get; set; }
 
     }
 }
