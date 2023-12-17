@@ -1,10 +1,5 @@
 ﻿using Postgrest.Attributes;
 using Postgrest.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Server.Tables
 {
@@ -18,6 +13,13 @@ namespace Server.Tables
         public string? LastMessage { get; set; }
 
         [Column("ChatType")]
-        public ChatType? ChatType { get; set; }
+        public ChatType ChatType { get; set; }
+
+        [Column("ChatName")]
+        public string? ChatName { get; set; }
+
+        [Column("Avatar")]
+        public string? Avatar { get; set; }
+
     }
 }

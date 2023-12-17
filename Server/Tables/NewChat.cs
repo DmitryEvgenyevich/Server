@@ -8,7 +8,7 @@ namespace Server.Tables
 {
     public class NewChat
     {
-        public string? RecipientUsername;
+        public int RecipientId;
 
         public int SenderId;
     }

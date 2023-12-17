@@ -28,7 +28,7 @@ namespace Server.Tables
 
         static Supabase.Client supabase;
 
-        public async static void DBinit()
+        public async static Task DBinit()
         {
             supabase = new Supabase.Client(supabaseUrl, supabaseKey, options);
             await supabase.InitializeAsync();
@@ -60,15 +60,16 @@ namespace Server.Tables
         {
             var result = await supabase
                 .From<Users>()
-                .Select(y => (new object[] { y.Id, y.Avatar, y.Username }))
-                .Where(y => y.Email == email)
+                .Select(x => (new object[] { x.Id, x.Avatar, x.LastLogin, x.Email, x.Username }))
+                .Where(x => x.Email == email)
                 .Single();
 
             return result!;
         }
+
         async static public Task<Users> GetUserByUsername(string Username)
         {
-            var result = await supabase.From<Users>().Select(x => new object[] { x.Id, x.Avatar, x.LastLogin }).Where(x => x.Username == Username).Single();
+            var result = await supabase.From<Users>().Select(x => new object[] { x.Id, x.Avatar, x.LastLogin, x.Email, x.Username }).Where(x => x.Username == Username).Single();
 
             return result!;
         }
@@ -82,8 +83,8 @@ namespace Server.Tables
         {
             var result = await supabase
                 .From<Users>()
-                .Select(y => (new object[] { y.Id, y.Avatar, y.Username }))
-                .Where(y => y.Id == id)
+                .Select(x => (new object[] { x.Id, x.Avatar, x.LastLogin, x.Email, x.Username }))
+                .Where(x => x.Id == id)
                 .Single();
 
             return result!;
@@ -122,6 +123,25 @@ namespace Server.Tables
             return chat!.Content;
         }
 
+        async static public Task SetNewLastLoginById(int userId, DateTimeOffset time)
+        {
+            var value = await supabase
+                    .From<Tables.Users>()
+                    .Where(x => x.Id == userId)
+                    .Set(x => x.LastLogin, time)
+                    .Update();
+        }
+        async static public Task<string> GetContactsIdsByChatId(int chatId, int userId)
+        {
+            var chat = await supabase
+                .From<UserChatUsers>()
+                .Select("Users:UserId(Id)")
+                .Where(x => x.UserChatId == chatId && x.UserId != userId)
+                .Get();
+
+            return chat!.Content;
+        }
+
         async static public Task<Users> GetUserByEmailAndPassword(string email, string password)
         {
             var result = await supabase
@@ -152,9 +172,9 @@ namespace Server.Tables
             return value.ResponseMessage!;
         }
 
-        async static public Task<HttpResponseMessage> InsertMessageToTableMessages(Messages message)
+        async static public Task InsertMessageToTableMessages(Messages message)
         {
-            return (await supabase.From<Messages>().Insert(message!)).ResponseMessage!;
+            _ = await supabase.From<Messages>().Insert(message!);
         }
 
         async static public Task<HttpResponseMessage> UpdatePassword(Users myObject)
@@ -182,7 +202,7 @@ namespace Server.Tables
 
         async static public Task<Postgrest.Responses.ModeledResponse<UserChats>> CreateNewChat()
         {
-            return await supabase.From<UserChats>().Insert(new UserChats());
+            return await supabase.From<UserChats>().Insert(new UserChats { ChatType = ChatType.Chat });
         }
 
         async static public Task<Postgrest.Responses.ModeledResponse<Users>> FindUsersByUsername(Users data)

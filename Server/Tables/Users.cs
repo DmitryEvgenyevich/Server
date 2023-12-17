@@ -20,7 +20,7 @@ namespace Server.Tables
         public string Password { get; set; }
 
         [Column("LastLogin")]
-        public string LastLogin { get; set; }
+        public DateTimeOffset? LastLogin { get; set; }
 
         [Column("Avatar")]
         public string Avatar { get; set; }

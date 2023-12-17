@@ -1,6 +1,8 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Text.Json;
 using Newtonsoft.Json;
@@ -12,13 +14,11 @@ namespace Server
 {
     class Server
     {
-        private static Dictionary<string, TcpClient> _onlineClients = new Dictionary<string, TcpClient>();
+        private static Dictionary<int, TcpClient> _onlineClients = new Dictionary<int, TcpClient>();
 
         private static async Task Main(string[] args)
         {
             DB.DBinit();
-            await _getMyChats("{\r\n  \"Command\": \"GetMyContacts\",\r\n  \"Id\": 1\r\n}");
-            //"{\r\n  \"Command\": \"GetMyContacts\",\r\n  \"Id\": 1\r\n}"
             await _startServerAsync();
         }
 
@@ -69,23 +69,24 @@ namespace Server
             }
         }
 
-        static void _deleteUserFromOnlineList(TcpClient clientSocket)
+        static async void _deleteUserFromOnlineList(TcpClient clientSocket)
         {
             try
             {
-                string key = _onlineClients.FirstOrDefault(x => x.Value == clientSocket).Key;
+                int key = _onlineClients.FirstOrDefault(x => x.Value == clientSocket).Key;
+                await DB.SetNewLastLoginById(key, DateTimeOffset.Now);
                 _onlineClients.Remove(key);
             }
-            catch (Exception ex2)
+            catch (Exception ex)
             {
-                Console.WriteLine("Error: " + ex2.Message);
+                Console.WriteLine("Error: " + ex.Message);
             }
         }
 
         static async Task _waitingForRequest(NetworkStream stream, TcpClient clientSocket)
         {
             int bytesRead;
-            byte[] buffer = new byte[512];
+            byte[] buffer = new byte[1024];
 
             try
             {
@@ -140,7 +141,7 @@ namespace Server
 
         private static async Task<Response> _findCommand(string json, TcpClient clientSocket, string nameElement)
         {
-            switch (nameElement)
+           switch (nameElement)
             {
                 case "SignIn":
                     return await _signIn(clientSocket, json);
@@ -151,8 +152,11 @@ namespace Server
                 case "ForgotPassword":
                     return await _forgotPassword(json);
 
-                case "SendMessage":
-                    return await _sendMessage(json);
+                case "SendMessageInChat":
+                    return await _sendMessageInChat(json);
+
+                case "SendMessageInGroup":
+                    return await _sendMessageInGroup(json);
 
                 case "SendNewCode":
                     return await _sendNewCode(json);
@@ -192,8 +196,10 @@ namespace Server
                     return new Response { ErrorMessage = "We can not to find your user, Email or password is not right" };
 
                 if (result.Auth)
-                    _onlineClients.Add(result.Username, clientSocket);
-                
+                {
+                    _onlineClients.Add(result.Id, clientSocket);
+                }
+
                 return new Response { Data = JsonConvert.SerializeObject(result) };
             }
             catch (Exception ex)
@@ -206,8 +212,8 @@ namespace Server
         {
             try
             {
-                var myObject = JsonConvert.DeserializeObject<Tables.Users>(json);
-                HttpResponseMessage httpResponse = await DB.InsertUserToTableUsers(myObject!); //// TO DO
+                var user = JsonConvert.DeserializeObject<Tables.Users>(json);
+                HttpResponseMessage httpResponse = await DB.InsertUserToTableUsers(user!);
 
                 return new Response { };
             }
@@ -215,7 +221,7 @@ namespace Server
             {
                 return GlobalUtils.GlobalUtils.GetErrorMessage(ex);
             }
-        }//TO DO
+        }
 
         static async Task<Response> _getMyChats(string json)
         {
@@ -237,7 +243,7 @@ namespace Server
                         {
                             DateTimeOffset result;
                             var temp = DateTimeOffset.TryParse(contact["Users"]?["LastLogin"]?.ToString(), out result);
-                            chats.Add(new ChatModel { ChatId = chat.UserChatId, Contact = new ContactModel { Avatar = contact["Users"]["Avatar"].ToString(), Email = contact["Users"]["Email"].ToString(), Id = ((int)contact["Users"]["Id"]), Username = contact["Users"]!["Username"]!.ToString(), LastLogin = temp ? result : null}, ChatName = contact["UserChats"]["ChatName"].ToString(), LastMessage = contact["UserChats"]["LastMessage"].ToString(), Type = (ChatType)Enum.ToObject(typeof(ChatType), ((int)contact["UserChats"]["ChatType"])) });
+                            chats.Add(new ChatModel { ChatId = chat.UserChatId, Contact = new ContactModel { Avatar = contact["Users"]["Avatar"].ToString(), Email = contact["Users"]["Email"].ToString(), Id = ((int)contact["Users"]["Id"]), Username = contact["Users"]!["Username"]!.ToString(), LastLogin = temp ? result : null}, ChatName = contact["Users"]!["Username"]!.ToString(), LastMessage = contact["UserChats"]["LastMessage"].ToString(), Type = (ChatType)Enum.ToObject(typeof(ChatType), ((int)contact["UserChats"]["ChatType"])) });
                         }
                         else if (((int)contact["UserChats"]["ChatType"]) == ((int)ChatType.Group))
                         {
@@ -246,14 +252,18 @@ namespace Server
                             {
                                 if (chatFromChats.ChatId == chat.UserChatId && chatFromChats.GetType() == typeof(GroupModel))
                                 {
-                                    ((GroupModel)chatFromChats).ContactsInGroup.Add(new ContactModel { Avatar = contact["Users"]["Avatar"].ToString(), Email = contact["Users"]["Email"].ToString(), Id = ((int)contact["Users"]["Id"]), LastLogin = DateTimeOffset.Parse(contact["Users"]["LastLogin"].ToString()), Username = contact["Users"]!["Username"]!.ToString()});
+                                    DateTimeOffset result;
+                                    var temp = DateTimeOffset.TryParse(contact["Users"]?["LastLogin"]?.ToString(), out result);
+                                    ((GroupModel)chatFromChats).ContactsInGroup.Add(new ContactModel { Avatar = contact["Users"]["Avatar"].ToString(), Email = contact["Users"]["Email"].ToString(), Id = ((int)contact["Users"]["Id"]), LastLogin = temp ? result : null, Username = contact["Users"]!["Username"]!.ToString()});
                                     test = false;
                                     break;
                                 }
                             }
                             if(test)
                             {
-                                chats.Add(new GroupModel { ChatId = chat.UserChatId, Avatar = contact["UserChats"]["Avatar"].ToString(), ChatName = contact["UserChats"]["ChatName"].ToString(), ContactsInGroup = new List<ContactModel> { new ContactModel { Avatar = contact["Users"]["Avatar"].ToString(), Email = contact["Users"]["Email"].ToString(), Id = ((int)contact["Users"]["Id"]), LastLogin = DateTimeOffset.Parse(contact["Users"]["LastLogin"].ToString()), Username = contact["Users"]!["Username"]!.ToString() } }, LastMessage = contact["UserChats"]["LastMessage"].ToString(), Type = (ChatType)Enum.ToObject(typeof(ChatType), ((int)contact["UserChats"]["ChatType"])) });
+                                DateTimeOffset result;
+                                var temp = DateTimeOffset.TryParse(contact["Users"]?["LastLogin"]?.ToString(), out result);
+                                chats.Add(new GroupModel { ChatId = chat.UserChatId, Avatar = contact["UserChats"]["Avatar"].ToString(), ChatName = contact["UserChats"]["ChatName"].ToString(), ContactsInGroup = new List<ContactModel> { new ContactModel { Avatar = contact["Users"]["Avatar"].ToString(), Email = contact["Users"]["Email"].ToString(), Id = ((int)contact["Users"]["Id"]), LastLogin = temp ? result : null, Username = contact["Users"]!["Username"]!.ToString() } }, LastMessage = contact["UserChats"]["LastMessage"].ToString(), Type = (ChatType)Enum.ToObject(typeof(ChatType), ((int)contact["UserChats"]["ChatType"])) });
                             }
                         }
                     }
@@ -265,7 +275,7 @@ namespace Server
             {
                 return GlobalUtils.GlobalUtils.GetErrorMessage(ex);
             }
-        }
+        }//TODO
 
         static async Task<Response> _sendNewCode(string json)
         {
@@ -289,10 +299,10 @@ namespace Server
                 Tables.Users myObject = JsonConvert.DeserializeObject<Tables.Users>(json)!;
 
                 await DB.UpdateAuthStatus(myObject.Email, myObject.Auth);
-
+                    
                 var user = await DB.GetUserByEmail(myObject.Email);
                 
-                _onlineClients.Add(user.Username, clientSocket);
+                _onlineClients.Add(user.Id, clientSocket);
                 
                 return new Response { Data = JsonConvert.SerializeObject(user) };
             }
@@ -317,17 +327,57 @@ namespace Server
             }
         }
 
-        static async Task<Response> _sendMessage(string json)
+        static async Task<Response> _sendMessageInGroup(string json)
         {
             try
             {
-                Tables.Messages myObject = JsonConvert.DeserializeObject<Tables.Messages>(json)!;
+                Tables.Messages message = JsonConvert.DeserializeObject<Tables.Messages>(json)!;
 
-                var userId = await DB.GetContactEmailByChatId(myObject.UserChatId, myObject.SenderId);
-                var user = await DB.GetUserById(1);
+                var tests = await DB.GetContactsIdsByChatId(message.UserChatId, message.SenderId);
+                JArray jsonArray = JArray.Parse(tests);
+
+
+                    foreach (JObject item in jsonArray)
+                {
+                    int userId = item["Users"].Value<int>("Id");
+                    TcpClient clientSocket;
+                    _onlineClients.TryGetValue(userId, out clientSocket);
+                    var stream = clientSocket?.GetStream();
+                    if (stream != null)
+                    {
+                        var dataForRecipient = new
+                        {
+                            Command = "NewMessage",
+                            Time = message.Time,
+                            Message = message.Message,
+                            ChatId = message.UserChatId,
+                            Username = (await DB.GetUserById(message.SenderId)).Username
+                        };
+
+                        await _sendRequest(stream!, new Notification { Data = JsonConvert.SerializeObject(dataForRecipient) });
+                    }
+
+
+                    await DB.InsertMessageToTableMessages(message);
+                }
+                return new Response { };
+            }
+            catch (Exception ex)
+            {
+                return GlobalUtils.GlobalUtils.GetErrorMessage(ex);
+            }
+        }
+
+        static async Task<Response> _sendMessageInChat(string json)
+        {
+            try
+            {
+                Tables.Messages message = JsonConvert.DeserializeObject<Tables.Messages>(json)!;
+                
+                int recipientId = JObject.Parse(json).Value<int>("RecipientId");
 
                 TcpClient clientSocket;
-                _onlineClients.TryGetValue(user.Username, out clientSocket);
+                _onlineClients.TryGetValue(recipientId, out clientSocket);
                 var stream = clientSocket?.GetStream();
 
                 if (stream != null)
@@ -335,18 +385,16 @@ namespace Server
                     var dataForRecipient = new
                     {
                         Command = "NewMessage",
-                        Time = myObject.Time,
-                        Message = myObject.Message,
-                        ChatId = myObject.UserChatId,
-                        Username = (await DB.GetUserById(myObject.SenderId)).Username
+                        Time = message.Time,
+                        Message = message.Message,
+                        ChatId = message.UserChatId,
+                        Username = (await DB.GetUserById(message.SenderId)).Username
                     };
 
                     await _sendRequest(stream!, new Notification { Data = JsonConvert.SerializeObject(dataForRecipient) });
                 }
 
-                await DB.InsertMessageToTableMessages(myObject);
-
-                
+                await DB.InsertMessageToTableMessages(message);
 
                 return new Response { };
             }
@@ -385,7 +433,7 @@ namespace Server
         {
             try 
             { 
-                string key = _onlineClients.FirstOrDefault(x => x.Value == clientSocket).Key;
+                int key = _onlineClients.FirstOrDefault(x => x.Value == clientSocket).Key;
                 _onlineClients.Remove(key);
                 Console.WriteLine("Client disconnected.");
                 return new Response { };
@@ -402,10 +450,10 @@ namespace Server
             try
             {
                 var dataForNewChat = JsonConvert.DeserializeObject<Tables.NewChat>(json);
-                
-                var newChat = await DB.CreateNewChat();// maybe error TEST
 
-                var recipient = await DB.GetUserByUsername(dataForNewChat.RecipientUsername);
+                var newChat = await DB.CreateNewChat();
+
+                var recipient = await DB.GetUserById(dataForNewChat.RecipientId);
 
                 var models = new List<UserChatUsers>
                 {
@@ -415,30 +463,22 @@ namespace Server
 
                 var chats = await DB.CreateChatConnection(models);
 
-                //UsersJoinUserChatsUsers contact = new UsersJoinUserChatsUsers {
-                //    Avatar = recipient.Avatar,
-                //    ChatId = (int)newChat.Model.Id,
-                //    LastLogin = recipient.LastLogin,
-                //    ChatName = dataForNewChat.RecipientUsername
-                //};
-
                 TcpClient clientSocket;
-                _onlineClients.TryGetValue(dataForNewChat.RecipientUsername, out clientSocket);
+                _onlineClients.TryGetValue(dataForNewChat.RecipientId, out clientSocket);
                 var stream = clientSocket?.GetStream();
                 
                 if (stream != null)
                 {
-                    var userData = await DB.GetUserById(dataForNewChat.SenderId);
                     var dataForRecipient = new
                     {
                         Command = "NewChat",
-                        Username = userData.Username,
+                        Username = recipient.Username,
                         ChatId = (int)newChat.Model.Id
                     };
                     await _sendRequest(stream!, new Notification { Data = JsonConvert.SerializeObject(dataForRecipient) });
                 }
 
-                return new Response { Data = JsonConvert.SerializeObject("") };
+                return new Response { Data = JsonConvert.SerializeObject(new ChatModel { ChatId = (int)newChat.Model.Id, Contact = new ContactModel { Avatar = recipient.Avatar, Email = recipient.Email, Id = recipient.Id, Username = recipient.Username, LastLogin = recipient.LastLogin }, ChatName = recipient.Username, LastMessage = newChat.Model.LastMessage, Type = ChatType.Chat }) };
             }
             catch (Exception ex)
             {
@@ -455,12 +495,12 @@ namespace Server
                 var users = await DB.FindUsersByUsername(data);
 
                 var jsonArray = JArray.Parse(users.Content);
-                List<Users> findUsers = new List<Users>();
+                List<object> findUsers = new List<object>();
 
                 // Пройтись по каждому элементу массива
                 foreach (var item in jsonArray)
                 {
-                    findUsers.Add(new Users { Username = item["Username"].ToString() });
+                    findUsers.Add(new { ChatName = item["Username"].ToString() });
                 }
 
                 return new Response { Data = JsonConvert.SerializeObject(findUsers) };
