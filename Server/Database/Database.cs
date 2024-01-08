@@ -79,7 +79,7 @@ namespace Server.Database
             return result!;
         }
 
-        async static public Task<HttpResponseMessage> UpdateAuthCodeByEmail(string email, int auth_code)
+        async static public Task<HttpResponseMessage> UpdateAuthCodeById(string email, int auth_code)
         {
             var value = await supabase
                 .From<Users>()

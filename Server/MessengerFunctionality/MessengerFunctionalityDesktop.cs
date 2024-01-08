@@ -35,7 +35,7 @@ namespace Server.MessengerFunctionality
             try
             {
                 var user = JsonConvert.DeserializeObject<Users>(json);
-                _ = Task.Run(() => OnlineUsers.OnlineUsers.AddUserToList_IfUserNotInOnlineList(user.Id, clientSocket));
+
                 HttpResponseMessage httpResponse = await Database.Database.InsertUserToTableUsers(user!);
 
                 return new Response { };
@@ -106,11 +106,9 @@ namespace Server.MessengerFunctionality
         {
             try
             {
-                Tables.Users myObject = JsonConvert.DeserializeObject<Tables.Users>(json)!;
+                Users myObject = JsonConvert.DeserializeObject<Users>(json)!;
 
-                _ = Task.Run(() => OnlineUsers.OnlineUsers.AddUserToList_IfUserNotInOnlineList(myObject.Id, clientSocket));
-
-                _ = Database.Database.UpdateAuthCodeByEmail(myObject.Email, myObject.AuthCode);
+                _ = Database.Database.UpdateAuthCodeById(myObject.Email, myObject.AuthCode);
 
                 return new Response { };
             }
@@ -124,13 +122,13 @@ namespace Server.MessengerFunctionality
         {
             try
             {
-                Tables.Users myObject = JsonConvert.DeserializeObject<Tables.Users>(json)!;
+                var myObject = JsonConvert.DeserializeObject<Users>(json)!;
 
-                await Database.Database.UpdateAuthStatus(myObject.Email, myObject.Auth);
+                _ = Database.Database.UpdateAuthStatus(myObject.Email, myObject.Auth);
 
                 var user = await Database.Database.GetUserByEmail(myObject.Email);
 
-                _ = Task.Run(() => OnlineUsers.OnlineUsers.AddUserToList_IfUserNotInOnlineList(myObject.Id, clientSocket));
+                _ = Task.Run(() => OnlineUsers.OnlineUsers.AddUserToList_IfUserNotInOnlineList(user.Id, clientSocket));
 
                 return new Response { Data = JsonConvert.SerializeObject(user) };
             }
@@ -144,11 +142,9 @@ namespace Server.MessengerFunctionality
         {
             try
             {
-                var myObject = JsonConvert.DeserializeObject<Tables.Users>(json)!;
+                var user = JsonConvert.DeserializeObject<Users>(json)!;
 
-                _ = Task.Run(() => OnlineUsers.OnlineUsers.AddUserToList_IfUserNotInOnlineList(myObject.Id, clientSocket));
-
-                await Database.Database.UpdatePassword(myObject);
+                await Database.Database.UpdatePassword(user);
 
                 return new Response { };
             }
@@ -243,7 +239,7 @@ namespace Server.MessengerFunctionality
             {
                 Messages chatId = JsonConvert.DeserializeObject<Messages>(json)!;
 
-                //_ = Task.Run(() => OnlineUsers.AddUserToList_IfUserNotInOnlineList(_getUserByTcpClient(clientSocket), clientSocket));//does not work
+                _ = Task.Run(() => OnlineUsers.OnlineUsers.AddUserToList_IfUserNotInOnlineList(JObject.Parse(json).Value<int>("UserId"), clientSocket));//does not work
 
                 List<ChatMessages> chatMessages = new List<ChatMessages>();
 
@@ -270,6 +266,7 @@ namespace Server.MessengerFunctionality
             {
                 OnlineUsers.OnlineUsers.DeleteUserFromOnlineList(clientSocket);
                 Console.WriteLine("Client disconnected.");
+
                 return new Response { };
             }
             catch (Exception ex)
@@ -325,15 +322,13 @@ namespace Server.MessengerFunctionality
         {
             try
             {
-                var data = JsonConvert.DeserializeObject<Tables.Users>(json);
-                //_ = Task.Run(() => OnlineUsers.AddUserToList_IfUserNotInOnlineList(_getUserByTcpClient(clientSocket), clientSocket)); //does not work
+                var data = JsonConvert.DeserializeObject<Users>(json);
+                _ = Task.Run(() => OnlineUsers.OnlineUsers.AddUserToList_IfUserNotInOnlineList(data.Id, clientSocket));
                 var users = await Database.Database.FindUsersByUsername(data);
 
-                var jsonArray = JArray.Parse(users.Content);
                 List<object> findUsers = new List<object>();
 
-                // Пройтись по каждому элементу массива
-                foreach (var item in jsonArray)
+                foreach (var item in JArray.Parse(users.Content))
                 {
                     findUsers.Add(new { ChatName = item["Username"].ToString() });
                 }
