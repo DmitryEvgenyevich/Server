@@ -1,21 +1,10 @@
-﻿using System;
-using System.Data;
-using System.Net;
-using System.Net.Sockets;
-using System.Reflection;
-using System.Text;
-using System.Text.Json;
-using Newtonsoft.Json;
-using Server.Message;
-using Server.Tables;
+﻿using Server.Tables;
 using Supabase;
-using Supabase.Gotrue;
-using Supabase.Interfaces;
 using static Postgrest.Constants;
 
-namespace Server.Tables
+namespace Server.Database
 {
-    static class DB
+    static class Database
     {
         static string supabaseUrl = "https://tfggopkviuvatvbssgev.supabase.co";
 
@@ -26,11 +15,11 @@ namespace Server.Tables
             AutoConnectRealtime = true
         };
 
-        static Supabase.Client supabase;
+        static Client supabase;
 
         public async static Task DBinit()
         {
-            supabase = new Supabase.Client(supabaseUrl, supabaseKey, options);
+            supabase = new Client(supabaseUrl, supabaseKey, options);
             await supabase.InitializeAsync();
         }
 
@@ -48,7 +37,7 @@ namespace Server.Tables
         async static public Task<HttpResponseMessage> UpdateAuthStatus(string email, bool auth)
         {
             var value = await supabase
-                    .From<Tables.Users>()
+                    .From<Users>()
                     .Where(x => x.Email == email)
                     .Set(x => x.Auth, auth)
                     .Update();
@@ -78,7 +67,7 @@ namespace Server.Tables
         {
             return await supabase.From<UserChatUsers>().Insert(models);
         }
-        
+
         async static public Task<Users> GetUserById(int id)
         {
             var result = await supabase
@@ -126,7 +115,7 @@ namespace Server.Tables
         async static public Task SetNewLastLoginById(int userId, DateTimeOffset time)
         {
             var value = await supabase
-                    .From<Tables.Users>()
+                    .From<Users>()
                     .Where(x => x.Id == userId)
                     .Set(x => x.LastLogin, time)
                     .Update();
@@ -160,7 +149,7 @@ namespace Server.Tables
         {
             return (await supabase.From<Users>().Insert(user!)).ResponseMessage!;
         }
-        
+
         async static public Task<HttpResponseMessage> UpdateAuthByEmail(string email, bool auth)
         {
             var value = await supabase
@@ -180,7 +169,7 @@ namespace Server.Tables
         async static public Task<HttpResponseMessage> UpdatePassword(Users myObject)
         {
             var value = await supabase
-                        .From<Tables.Users>()
+                        .From<Users>()
                         .Where(x => x.Email == myObject.Email)
                         .Set(x => x.Auth, myObject.Auth)
                         .Set(x => x.Password, myObject.Password)
@@ -213,5 +202,5 @@ namespace Server.Tables
                   .Limit(5)
                   .Get();
         }
-    }   
+    }
 }

@@ -1,5 +1,7 @@
 ﻿using Postgrest.Attributes;
 using Postgrest.Models;
+using Server.Statuses;
+using Server.Types;
 
 namespace Server.Tables
 {
@@ -21,11 +23,11 @@ namespace Server.Tables
         [Column("UserChatId")]
         public int UserChatId { get; set; }
 
-        [Column("StatusMessageId")]
-        public int StatusMessageId { get; set; }
+        [Column("StatusOfMessage")]
+        public MessageStatus StatusOfMessage { get; set; }
 
-        [Column("TypeOfMessageId")]
-        public int TypeOfMessageId { get; set; } = 1;
+        [Column("TypeOfMessage")]
+        public MessageTypes TypeOfMessage { get; set; }
 
         [Column("FileId")]
         public int? FileId { get; set; }

@@ -18,7 +18,7 @@ namespace Server.GlobalUtils
         {
             string error = TryToGetCommandFromJson(ex.Message, "details");
 
-            if (error.ToString() != string.Empty)
+            if (error.ToString() != string.Empty || error.ToString() != null)
                 return new Response { ErrorMessage = error };
 
             error = TryToGetCommandFromJson(ex.Message, "message");
