@@ -1,5 +1,4 @@
-﻿using System;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Server.Message
@@ -14,9 +13,9 @@ namespace Server.Message
 
         public string Type { get; set; } = "Response";
 
-        public string ErrorMessage { get; set; }
+        public string? ErrorMessage { get; set; }
 
-        public string Data { get; set; }
+        public string? Data { get; set; }
     }
 
     public class Notification : IMessage
@@ -67,12 +66,9 @@ namespace Server.Message
 
             writer.WriteStartObject();
 
-           // writer.WriteStartObject(value.GetType().Name);
-
             writer.WritePropertyName("Type");
             writer.WriteStringValue(value.Type);
 
-            // Далее записываем свойства в зависимости от типа сообщения
             if (value is Response response)
             {
                 if (response.ErrorMessage != null)
@@ -110,4 +106,5 @@ namespace Server.Message
             writer.WriteEndObject();
         }
     }
+
 }

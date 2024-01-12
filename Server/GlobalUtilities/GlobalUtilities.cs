@@ -1,20 +1,16 @@
 ﻿using Server.Message;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
-namespace Server.GlobalUtils
+namespace Server.GlobalUtilities
 {
-    static class GlobalUtils
+    static class GlobalUtilities
     {
-        public static string TryToGetCommandFromJson(string json, string proparty)
+        public static string TryToGetCommandFromJson(string json, string property)
         {
             JsonDocument jsonDocument = JsonDocument.Parse(json);
             JsonElement root = jsonDocument.RootElement;
-            root.TryGetProperty(proparty, out JsonElement nameElement);
+            root.TryGetProperty(property, out JsonElement nameElement);
             return nameElement.ToString();
         }
 
@@ -22,12 +18,12 @@ namespace Server.GlobalUtils
         {
             string error = TryToGetCommandFromJson(ex.Message, "details");
 
-            if (error.ToString() != string.Empty)
+            if (error.ToString() != "" || error.ToString() != null)
                 return new Response { ErrorMessage = error };
 
             error = TryToGetCommandFromJson(ex.Message, "message");
 
-            if (error.ToString() != string.Empty)
+            if (error.ToString() != "")
                 return new Response { ErrorMessage = ex.Message };
 
             return new Response { ErrorMessage = ex.Message };

@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Server.Tables
+﻿namespace Server.Tables
 {
     public class ChatMessages
     {   
@@ -12,6 +6,6 @@ namespace Server.Tables
 
         public string? Message;
 
-        public DateTime Time;
+        public DateTimeOffset? Time;
     }
 }

@@ -1,35 +1,100 @@
-﻿using Postgrest.Attributes;
+﻿using Newtonsoft.Json;
+using Postgrest.Attributes;
 using Postgrest.Models;
+using Server.Message;
+using System.Net.Sockets;
 
 namespace Server.Tables
 {
-    [Table("users")]
-    public class Users : BaseModel
+    [Table("Users")]
+    internal class Users : BaseModel
     {
 
-        [PrimaryKey("id", false)]
+        [PrimaryKey("Id", false)]
         public int Id { get; set; }
 
-        [Column("username")]
-        public string Username { get; set; }
+        [Column("Username")]
+        public string? Username { get; set; }
 
-        [Column("email")]
-        public string Email { get; set; }
+        [Column("Email")]
+        public string? Email { get; set; }
 
-        [Column("password")]
-        public string Password { get; set; }
+        [Column("Password")]
+        public string? Password { get; set; }
 
-        [Column("last_login")]
-        public string Last_login { get; set; }
+        [Column("LastLogin")]
+        public DateTimeOffset? LastLogin { get; set; }
 
-        [Column("avatar")]
-        public string Avatar { get; set; }
+        [Column("Avatar")]
+        public string? Avatar { get; set; }
 
-        [Column("auth")]
+        [Column("Auth")]
         public bool Auth { get; set; }
         
-        [Column("auth_code")]
-        public int Auth_code { get; set; }
+        [Column("AuthCode")]
+        public int AuthCode { get; set; }
 
+        static public async Task TryToSendToUsers(List<Users> usersList, Messages message, string Username)
+        {
+            await Task.Run(() =>
+            {
+                foreach (var item in usersList)
+                {
+                    _ = TryToSendToUser(item.Id, message, Username);
+                }
+            });
+        }
+
+        static public async Task TryToSendToUser(int id, Messages message, string Username)
+        {
+            await Task.Run(() =>
+            {
+                TcpClient clientSocketRecipient;
+
+                OnlineUsers.OnlineUsers.TryToGetValue(id, out clientSocketRecipient);
+                var stream = clientSocketRecipient?.GetStream();
+                if (stream != null)
+                {
+                    var dataForRecipient = new
+                    {
+                        Command = "NewMessage",
+                        Time = message.Time,
+                        Message = message.Message,
+                        ChatId = message.UserChatId,
+                        Username = Username
+                    };
+
+                    _ = Server.Server._sendRequest(stream!, new Notification { Data = JsonConvert.SerializeObject(dataForRecipient) });
+                }
+            });
+        }
+
+        static public async Task TryToSendNotification(int recipientId, int chatId, string recipientUsername)
+        {
+            await Task.Run(() =>
+            {
+                TcpClient clientSocketRecipient;
+                OnlineUsers.OnlineUsers.TryToGetValue(recipientId, out clientSocketRecipient);
+
+                var stream = clientSocketRecipient?.GetStream();
+
+                if (stream != null)
+                {
+                    var dataForRecipient = new
+                    {
+                        Command = "NewChat",
+                        ChatName = recipientUsername,
+                        ChatId = chatId
+                    };
+                    _ = Server.Server._sendRequest(stream!, new Notification { Data = JsonConvert.SerializeObject(dataForRecipient) });
+                }
+            });
+        }
     }
+
+    internal class Wrapper
+    {
+        public Users? Users { get; set; }
+    }
+
 }

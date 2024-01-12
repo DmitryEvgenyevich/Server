@@ -1,33 +1,35 @@
 ﻿using Postgrest.Attributes;
 using Postgrest.Models;
+using Server.Statuses;
+using Server.Types;
 
 namespace Server.Tables
 {
     [Table("Messages")]
     internal class Messages : BaseModel
     {
-        [PrimaryKey("id", false)]
+        [PrimaryKey("Id", false)]
         public int Id { get; set; }
 
-        [Column("sender_id")]
+        [Column("SenderId")]
         public int SenderId { get; set; }
 
-        [Column("message")]
-        public string Message { get; set; }
+        [Column("Message")]
+        public string? Message { get; set; }
 
-        [Column("time")]
+        [Column("Time")]
         public DateTime Time { get; set; }
 
-        [Column("user_chat_id")]
+        [Column("UserChatId")]
         public int UserChatId { get; set; }
 
-        [Column("status_message_id")]
-        public int StatusMessageId { get; set; }
+        [Column("StatusOfMessage")]
+        public MessageStatus StatusOfMessage { get; set; }
 
-        [Column("type_of_message_id")]
-        public int TypeOfMessageId { get; set; } = 1;
+        [Column("TypeOfMessage")]
+        public MessageTypes TypeOfMessage { get; set; }
 
-        [Column("file_id")]
+        [Column("FileId")]
         public int? FileId { get; set; }
     }
 }
