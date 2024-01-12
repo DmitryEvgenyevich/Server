@@ -52,7 +52,7 @@ namespace Server.Server
             }
             finally
             {
-                OnlineUsers.OnlineUsers.DeleteUserFromOnlineList(clientSocket);
+                _ = OnlineUsers.OnlineUsers.DeleteUserFromOnlineList(clientSocket);
                 Console.WriteLine("Client disconnected.");
             }
         }
@@ -66,7 +66,7 @@ namespace Server.Server
             {
                 while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                 {
-                    Response response = await _tryToGetCommand(GlobalUtils.GlobalUtils.ConvertBytesToString(buffer, bytesRead), clientSocket);
+                    Response response = await _tryToGetCommand(GlobalUtilities.GlobalUtilities.ConvertBytesToString(buffer, bytesRead), clientSocket);
                     await _sendRequest(stream, response);
                 }
             }
@@ -81,11 +81,11 @@ namespace Server.Server
         {
             try
             {
-                string command = GlobalUtils.GlobalUtils.TryToGetCommandFromJson(json, "Command").ToString();
+                string command = GlobalUtilities.GlobalUtilities.TryToGetCommandFromJson(json, "Command").ToString();
 
-                if (GlobalUtils.GlobalUtils.isStringEmpty(command))
+                if (GlobalUtilities.GlobalUtilities.isStringEmpty(command))
                 {
-                    return new Response { ErrorMessage = "Can not find this proparty" };
+                    return new Response { ErrorMessage = "Can not find this property" };
                 }
 
                 return await _callCommand(json, clientSocket, command);

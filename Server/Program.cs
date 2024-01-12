@@ -1,5 +1,4 @@
-﻿
-namespace Server
+﻿namespace Server
 {
     class Start
     {

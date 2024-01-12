@@ -11,13 +11,17 @@ namespace Server.OnlineUsers
             return _onlineClients.FirstOrDefault(x => x.Value == clientSocket).Key;
         }
 
-        public static void AddUserToList_IfUserNotInOnlineList(int idUser, TcpClient clientSocket)
+        public static async Task AddUserToList_IfUserIsNotInOnlineList(int idUser, TcpClient clientSocket)
         {
-            if (!_onlineClients.ContainsKey(idUser))
-                _onlineClients.Add(idUser, clientSocket);
+            await Task.Run(() =>
+            {
+                if (!_onlineClients.ContainsKey(idUser))
+                    _onlineClients.Add(idUser, clientSocket);
+
+            });
         }
 
-        public static async void DeleteUserFromOnlineList(TcpClient clientSocket)
+        public static async Task DeleteUserFromOnlineList(TcpClient clientSocket)
         {
             try
             {
@@ -35,6 +39,5 @@ namespace Server.OnlineUsers
         {
             _onlineClients.TryGetValue(recipientId, out clientSocketRicipient!);
         }
-
     }
 }

@@ -1,10 +1,5 @@
 ﻿using Postgrest.Attributes;
 using Postgrest.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Server.Tables
 {
@@ -17,6 +12,9 @@ namespace Server.Tables
 
         [PrimaryKey("UserId", true)]
         public int UserId { get; set; }
+
+        [Column("LastMessage")]
+        public int? LastMessage { get; set; }
 
     }
 }

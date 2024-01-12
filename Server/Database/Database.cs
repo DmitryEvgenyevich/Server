@@ -1,4 +1,5 @@
-﻿using Server.Tables;
+﻿using Newtonsoft.Json;
+using Server.Tables;
 using Supabase;
 using static Postgrest.Constants;
 
@@ -6,26 +7,22 @@ namespace Server.Database
 {
     static class Database
     {
-        static string supabaseUrl = "https://tfggopkviuvatvbssgev.supabase.co";
-
-        static string supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRmZ2dvcGt2aXV2YXR2YnNzZ2V2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDAyNDc4ODgsImV4cCI6MjAxNTgyMzg4OH0.y7CsjBe31W072cYdZv6SgveBjVD4MrsAINLc8L2PZDI";
-
         static SupabaseOptions options = new SupabaseOptions
         {
             AutoConnectRealtime = true
         };
 
-        static Client supabase;
+        static Client? supabase;
 
         public async static Task DBinit()
         {
-            supabase = new Client(supabaseUrl, supabaseKey, options);
+            supabase = new Client(Environment.GetEnvironmentVariable("SUPABASE_URL")!, Environment.GetEnvironmentVariable("SUPABASE_KEY"), options);
             await supabase.InitializeAsync();
         }
 
         async static public Task<Users> GetUserIdByEmail(string email)
         {
-            var result = await supabase
+            var result = await supabase!
                 .From<Users>()
                 .Select(y => (new object[] { y.Id }))
                 .Where(y => y.Email == email)
@@ -34,22 +31,23 @@ namespace Server.Database
             return result!;
         }
 
-        async static public Task<HttpResponseMessage> UpdateAuthStatus(string email, bool auth)
+        async static public Task<Users> UpdateAuthStatus(string email, bool auth)
         {
-            var value = await supabase
+            var value = await supabase!
                     .From<Users>()
+                    .Select(x => (new object[] { x.Id, x.Avatar!, x.LastLogin!, x.Email!, x.Username! }))
                     .Where(x => x.Email == email)
                     .Set(x => x.Auth, auth)
                     .Update();
 
-            return value.ResponseMessage!;
+            return value.Model!;
         }
 
         async static public Task<Users> GetUserByEmail(string email)
         {
-            var result = await supabase
+            var result = await supabase!
                 .From<Users>()
-                .Select(x => (new object[] { x.Id, x.Avatar, x.LastLogin, x.Email, x.Username }))
+                .Select(x => (new object[] { x.Id, x.Avatar!, x.LastLogin!, x.Email!, x.Username! }))
                 .Where(x => x.Email == email)
                 .Single();
 
@@ -58,84 +56,79 @@ namespace Server.Database
 
         async static public Task<Users> GetUserByUsername(string Username)
         {
-            var result = await supabase.From<Users>().Select(x => new object[] { x.Id, x.Avatar, x.LastLogin, x.Email, x.Username }).Where(x => x.Username == Username).Single();
+            var result = await supabase!.From<Users>().Select(x => new object[] { x.Id, x.Avatar!, x.LastLogin!, x.Email!, x.Username! }).Where(x => x.Username == Username).Single();
 
             return result!;
         }
 
         async static public Task<Postgrest.Responses.ModeledResponse<UserChatUsers>> CreateChatConnection(List<UserChatUsers> models)
         {
-            return await supabase.From<UserChatUsers>().Insert(models);
+            return await supabase!.From<UserChatUsers>().Insert(models);
         }
 
         async static public Task<Users> GetUserById(int id)
         {
-            var result = await supabase
+            var result = await supabase!
                 .From<Users>()
-                .Select(x => (new object[] { x.Id, x.Avatar, x.LastLogin, x.Email, x.Username }))
+                .Select(x => (new object[] { x.Id, x.Avatar!, x.LastLogin!, x.Email!, x.Username! }))
                 .Where(x => x.Id == id)
                 .Single();
 
             return result!;
         }
 
-        async static public Task<HttpResponseMessage> UpdateAuthCodeById(string email, int auth_code)
+        async static public Task UpdateAuthCodeBysersEmail(string email, int auth_code)
         {
-            var value = await supabase
+            var value = await supabase!
                 .From<Users>()
                 .Where(x => x.Email == email)
                 .Set(x => x.AuthCode, auth_code)
                 .Update();
-
-            return value.ResponseMessage!;
         }
 
-        async static public Task<List<UserChatUsers>> GetChatsByUserId(int Id)
+        async static public Task<string> GetChatsByUserId(int Id)
         {
-            var chats = await supabase
+            var userChatIdList = JsonConvert.DeserializeObject<List<UserChatUsers>>((await supabase!
                 .From<UserChatUsers>()
-                .Select(x => new object[] { x.UserChatId })
+                .Select(x => (new object[] { x.UserChatId }))
                 .Where(x => x.UserId == Id)
-                .Get();
+                .Get()).Content!)!.Select(x => x.UserChatId).Cast<object>().ToList();
 
-            return chats!.Models;
-        }
-
-        async static public Task<string> GetContactEmailByChatId(int chatId, int userId)
-        {
-            var chat = await supabase
+            var result = await supabase
                 .From<UserChatUsers>()
-                .Select("Users:UserId(Id, Username, Avatar, LastLogin, Email), UserChats:UserChatId(LastMessage, ChatType, ChatName, Avatar)")
-                .Where(x => x.UserChatId == chatId && x.UserId != userId)
+                .Select("Users:UserId(Id, Username, Avatar, LastLogin, Email), UserChats:UserChatId(Id, ChatType, ChatName, Avatar), Messages:LastMessage(Message, Users:SenderId(Username), Time)")
+                .Filter(x => x.UserChatId, Operator.In, userChatIdList)
+                .Where(x => x.UserId != Id)
+                .Order("Messages", "Time", Ordering.Descending)
                 .Get();
 
-            return chat!.Content;
+            return result.Content!;
         }
 
         async static public Task SetNewLastLoginById(int userId, DateTimeOffset time)
         {
-            var value = await supabase
+            var value = await supabase!
                     .From<Users>()
                     .Where(x => x.Id == userId)
-                    .Set(x => x.LastLogin, time)
+                    .Set(x => x.LastLogin!, time)
                     .Update();
         }
         async static public Task<string> GetContactsIdsByChatId(int chatId, int userId)
         {
-            var chat = await supabase
+            var chat = await supabase!
                 .From<UserChatUsers>()
                 .Select("Users:UserId(Id)")
                 .Where(x => x.UserChatId == chatId && x.UserId != userId)
                 .Get();
 
-            return chat!.Content;
+            return chat!.Content!;
         }
 
         async static public Task<Users> GetUserByEmailAndPassword(string email, string password)
         {
-            var result = await supabase
+            var result = await supabase!
                 .From<Users>()
-                .Select(x => new object[] { x.Id, x.Username, x.Email, x.Auth, x.Avatar })
+                .Select(x => new object[] { x.Id, x.Username!, x.Email!, x.Auth, x.Avatar! })
                 .Where(x =>
                         x.Email == email &&
                         x.Password == password
@@ -147,12 +140,12 @@ namespace Server.Database
 
         async static public Task<HttpResponseMessage> InsertUserToTableUsers(Users user)
         {
-            return (await supabase.From<Users>().Insert(user!)).ResponseMessage!;
+            return (await supabase!.From<Users>().Insert(user!)).ResponseMessage!;
         }
 
         async static public Task<HttpResponseMessage> UpdateAuthByEmail(string email, bool auth)
         {
-            var value = await supabase
+            var value = await supabase!
                 .From<Users>()
                 .Where(x => x.Email == email)
                 .Set(x => x.Auth, auth)
@@ -163,42 +156,42 @@ namespace Server.Database
 
         async static public Task InsertMessageToTableMessages(Messages message)
         {
-            _ = await supabase.From<Messages>().Insert(message!);
+            _ = await supabase!.From<Messages>().Insert(message!);
         }
 
         async static public Task<HttpResponseMessage> UpdatePassword(Users myObject)
         {
-            var value = await supabase
+            var value = await supabase!
                         .From<Users>()
                         .Where(x => x.Email == myObject.Email)
                         .Set(x => x.Auth, myObject.Auth)
-                        .Set(x => x.Password, myObject.Password)
+                        .Set(x => x.Password!, myObject.Password)
                         .Update();
 
             return value.ResponseMessage!;
         }
 
-        async static public Task<string> GetMessages(Messages myObject)
+        async static public Task<string> GetMessagesByChatId(int chatId)
         {
-            var messages = await supabase
+            var messages = await supabase!
                     .From<Messages>()
                     .Select("Users:SenderId(Username), Time, Message")
-                    .Where(x => x.UserChatId == myObject.UserChatId)
+                    .Where(x => x.UserChatId == chatId)
                     .Get();
 
-            return messages.Content;
+            return messages.Content!;
         }
 
         async static public Task<Postgrest.Responses.ModeledResponse<UserChats>> CreateNewChat()
         {
-            return await supabase.From<UserChats>().Insert(new UserChats { ChatType = ChatType.Chat });
+            return await supabase!.From<UserChats>().Insert(new UserChats { ChatType = ChatType.Chat });
         }
 
-        async static public Task<Postgrest.Responses.ModeledResponse<Users>> FindUsersByUsername(Users data)
+        async static public Task<Postgrest.Responses.ModeledResponse<Users>> FindUsersByUsername(string Username, int Id)
         {
-            return await supabase.From<Users>()
-                  .Filter(x => x.Username, Operator.ILike, data.Username + "%")
-                  .Where(x => x.Id != data.Id)
+            return await supabase!.From<Users>()
+                  .Filter(x => x.Username!, Operator.ILike, Username + "%")
+                  .Where(x => x.Id != Id)
                   .Limit(5)
                   .Get();
         }

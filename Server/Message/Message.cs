@@ -13,9 +13,9 @@ namespace Server.Message
 
         public string Type { get; set; } = "Response";
 
-        public string ErrorMessage { get; set; }
+        public string? ErrorMessage { get; set; }
 
-        public string Data { get; set; }
+        public string? Data { get; set; }
     }
 
     public class Notification : IMessage

@@ -1,5 +1,4 @@
-﻿
-namespace Server.Tables
+﻿namespace Server.Tables
 {
     public class ChatMessages
     {   

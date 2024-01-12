@@ -15,7 +15,7 @@ namespace Server.Tables
         public int SenderId { get; set; }
 
         [Column("Message")]
-        public string Message { get; set; }
+        public string? Message { get; set; }
 
         [Column("Time")]
         public DateTime Time { get; set; }
