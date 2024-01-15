@@ -20,6 +20,15 @@ namespace Server.Database
             await supabase.InitializeAsync();
         }
 
+        async static public Task SetLastMessage(int chatId, int messageId)
+        {
+            var result = await supabase!
+                .From<UserChatUsers>()
+                .Where(y => y.UserChatId == chatId)
+                .Set(x => x.LastMessage!, messageId)
+                .Update();
+        }
+
         async static public Task<Users> GetUserIdByEmail(string email)
         {
             var result = await supabase!
@@ -142,9 +151,9 @@ namespace Server.Database
             return value.ResponseMessage!;
         }
 
-        async static public Task InsertMessageToTableMessages(Messages message)
+        async static public Task<Postgrest.Responses.ModeledResponse<Messages>> InsertMessageToTableMessages(Messages message)
         {
-            _ = await supabase!.From<Messages>().Insert(message!);
+            return await supabase!.From<Messages>().Select(x => new object[] { x.Id }).Insert(message!);
         }
 
         async static public Task<HttpResponseMessage> UpdatePassword(Users myObject)

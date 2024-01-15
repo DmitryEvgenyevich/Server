@@ -150,7 +150,7 @@ namespace Server.MessengerFunctionality
 
                 _ = Users.TryToSendToUser(JObject.Parse(json).Value<int>("RecipientId"), message, JObject.Parse(json).Value<string>("SenderUsername")!);
 
-                _ = Database.Database.InsertMessageToTableMessages(message);
+                _ = Database.Database.SetLastMessage(message.UserChatId, (await Database.Database.InsertMessageToTableMessages(message)).Model!.Id);
 
                 return new Response { };
             }
