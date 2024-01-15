@@ -67,13 +67,13 @@ namespace Server.Server
                 while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                 {
                     Response response = await _tryToGetCommand(GlobalUtilities.GlobalUtilities.ConvertBytesToString(buffer, bytesRead), clientSocket);
-                    await _sendRequest(stream, response);
+                    await SendRequest(stream, response);
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
-                await _sendRequest(stream, new Response { ErrorMessage = ex.Message });
+                await SendRequest(stream, new Response { ErrorMessage = ex.Message });
             }
         }
 
@@ -98,7 +98,7 @@ namespace Server.Server
             }
         }
 
-        public static async Task _sendRequest(NetworkStream stream, IMessage message)
+        public static async Task SendRequest(NetworkStream stream, IMessage message)
         {
             var options = new JsonSerializerOptions
             {

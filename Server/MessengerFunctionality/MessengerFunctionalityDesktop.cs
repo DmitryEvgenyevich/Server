@@ -19,7 +19,7 @@ namespace Server.MessengerFunctionality
                 if (result?.Id == null)
                     return new Response { ErrorMessage = "We can not to find this user, Email or password is not right" };
 
-                if (result.Auth)
+                if (result.AuthenticationStatus)
                    _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(result.Id, clientSocket);
 
                 return new Response { Data = JsonConvert.SerializeObject(result) };
@@ -34,11 +34,7 @@ namespace Server.MessengerFunctionality
         {
             try
             {
-                var user = JsonConvert.DeserializeObject<Users>(json);
-
-                HttpResponseMessage httpResponse = await Database.Database.InsertUserToTableUsers(user!);
-
-                return new Response { };
+                return new Response { Data = JsonConvert.SerializeObject(await Database.Database.InsertUserToTableUsers(JsonConvert.DeserializeObject<Users>(json)!)) };
             }
             catch (Exception ex)
             {
@@ -64,13 +60,13 @@ namespace Server.MessengerFunctionality
             }
         }
 
-        public Response SendNewCode(TcpClient clientSocket, string json)
+        public async Task<Response> SendNewCode(TcpClient clientSocket, string json)
         {
             try
             {
                 Users user = JsonConvert.DeserializeObject<Users>(json)!;
 
-                _ = Database.Database.UpdateAuthCodeBysersEmail(user.Email!, user.AuthCode);
+                _ = Authentication.Authentication.UpdateOrAddNewUser(user.Id, GlobalUtilities.GlobalUtilities.CreateRandomNumber(1000000, 9999999));
 
                 return new Response { };
             }
@@ -80,17 +76,24 @@ namespace Server.MessengerFunctionality
             }
         }
 
-        public async Task<Response> AuthSuccess(TcpClient clientSocket, string json)
+        public async Task<Response> IsCodeRight(TcpClient clientSocket, string json)
         {
             try
             {
                 var myObject = JsonConvert.DeserializeObject<Users>(json)!;
 
-                var user = await Database.Database.UpdateAuthStatus(myObject.Email!, myObject.Auth);
+                var error = Authentication.Authentication.IsCodeRight_DeleteFromList(myObject.Id, JObject.Parse(json).Value<int>("AuthenticationCode")).ErrorMessage;
 
-                _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(user.Id, clientSocket);
+                if (error != null)
+                {
+                    return new Response { ErrorMessage = error };
+                }
 
-                return new Response { Data = JsonConvert.SerializeObject(user) };
+                _ = Database.Database.UpdateAuthStatus(myObject.Id, true);
+
+                _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(myObject.Id, clientSocket);
+
+                return new Response { };
             }
             catch (Exception ex)
             {

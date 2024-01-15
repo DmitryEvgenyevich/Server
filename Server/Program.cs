@@ -1,4 +1,6 @@
-﻿namespace Server
+﻿using Server.Authentication;
+
+namespace Server
 {
     class Start
     {

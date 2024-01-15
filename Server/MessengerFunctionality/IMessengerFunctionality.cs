@@ -12,9 +12,9 @@ namespace Server.MessengerFunctionality
 
         Task<Response> GetMyContacts(TcpClient clientSocket, string json);
 
-        Response SendNewCode(TcpClient clientSocket, string json);
+        Task<Response> SendNewCode(TcpClient clientSocket, string json);
 
-        Task<Response> AuthSuccess(TcpClient clientSocket, string json);
+        Task<Response> IsCodeRight(TcpClient clientSocket, string json);
 
         Task<Response> ForgotPassword(TcpClient clientSocket, string json);
 
