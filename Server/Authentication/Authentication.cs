@@ -6,13 +6,13 @@ namespace Server.Authentication
     {
         static Dictionary<int, (int, DateTime)> _authenticationList = new Dictionary<int, (int, DateTime)>();
 
-        static int min = 10;
+        static int waitInMinutes = 5;
 
         static public async Task UpdateOrAddNewUser(int userId,  int code)
         {
             await Task.Run(() =>
             {
-                DateTime time = DateTime.Now.AddMinutes(min);
+                DateTime time = DateTime.Now.AddMinutes(waitInMinutes);
 
                 if (_authenticationList.ContainsKey(userId))
                 {
@@ -26,20 +26,23 @@ namespace Server.Authentication
             });
         }
 
-        public static Response IsCodeRight_DeleteFromList(int userId, int code)
+        public async static Task<Response> IsCodeRight_DeleteFromList(int userId, int code)
         {
-            if (_authenticationList.ContainsKey(userId))
-            { 
-                if (code == _authenticationList[userId].Item1)
-                {
-                    _authenticationList.Remove(userId);
-                    return new Response { };
+            return await Task.Run(() =>
+            {
+                if (_authenticationList.ContainsKey(userId))
+                { 
+                    if (code == _authenticationList[userId].Item1)
+                    {
+                        _authenticationList.Remove(userId);
+                        return new Response { };
+                    }
+
+                    return new Response { ErrorMessage = "Wrong code" };
                 }
 
-                return new Response { ErrorMessage = "not" };
-            }
-
-            return new Response { ErrorMessage = "You are to late" };
+                return new Response { ErrorMessage = "The code is no longer valid" };
+            });
         }
 
         static async Task _automaticDeletion(int userId, DateTime test)

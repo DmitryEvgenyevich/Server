@@ -66,7 +66,7 @@ namespace Server.MessengerFunctionality
             {
                 Users user = JsonConvert.DeserializeObject<Users>(json)!;
 
-                _ = Authentication.Authentication.UpdateOrAddNewUser(user.Id, GlobalUtilities.GlobalUtilities.CreateRandomNumber(1000000, 9999999));
+                await Authentication.Authentication.UpdateOrAddNewUser(user.Id, GlobalUtilities.GlobalUtilities.CreateRandomNumber(1000000, 9999999));
 
                 return new Response { };
             }
@@ -82,7 +82,7 @@ namespace Server.MessengerFunctionality
             {
                 var myObject = JsonConvert.DeserializeObject<Users>(json)!;
 
-                var error = Authentication.Authentication.IsCodeRight_DeleteFromList(myObject.Id, JObject.Parse(json).Value<int>("AuthenticationCode")).ErrorMessage;
+                var error = (await Authentication.Authentication.IsCodeRight_DeleteFromList(myObject.Id, JObject.Parse(json).Value<int>("AuthenticationCode"))).ErrorMessage;
 
                 if (error != null)
                 {
@@ -101,7 +101,7 @@ namespace Server.MessengerFunctionality
             }
         }
 
-        public async Task<Response> ForgotPassword(TcpClient clientSocket, string json)
+        public async Task<Response> UpdatePassword(TcpClient clientSocket, string json)
         {
             try
             {
@@ -128,7 +128,7 @@ namespace Server.MessengerFunctionality
                 var usersList = JsonConvert.DeserializeObject<List<Wrapper>>(await Database.Database.GetContactsIdsByChatId(message.UserChatId, message.SenderId))!
                                             .ConvertAll(wrapper => wrapper.Users);
 
-                _ = Users.TryToSendToUsers(usersList!, message, (await Database.Database.GetUserById(message.SenderId)).Username!);
+                _ = Users.TryToSendToUsers(usersList!, message, JObject.Parse(json).Value<string>("SenderUsername")!);
 
                 _ = Database.Database.InsertMessageToTableMessages(message);
 
@@ -148,9 +148,10 @@ namespace Server.MessengerFunctionality
 
                 _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(message.SenderId, clientSocket);
 
-                _ = Users.TryToSendToUser(JObject.Parse(json).Value<int>("RecipientId"), message, (await Database.Database.GetUserById(message.SenderId)).Username!);
+                _ = Users.TryToSendToUser(JObject.Parse(json).Value<int>("RecipientId"), message, JObject.Parse(json).Value<string>("SenderUsername")!);
 
                 _ = Database.Database.InsertMessageToTableMessages(message);
+
                 return new Response { };
             }
             catch (Exception ex)

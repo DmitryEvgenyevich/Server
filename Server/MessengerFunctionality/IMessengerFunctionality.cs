@@ -16,7 +16,7 @@ namespace Server.MessengerFunctionality
 
         Task<Response> IsCodeRight(TcpClient clientSocket, string json);
 
-        Task<Response> ForgotPassword(TcpClient clientSocket, string json);
+        Task<Response> UpdatePassword(TcpClient clientSocket, string json);
 
         Task<Response> SendMessageInGroup(TcpClient clientSocket, string json);
 
