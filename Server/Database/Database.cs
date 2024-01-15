@@ -152,7 +152,7 @@ namespace Server.Database
             var value = await supabase!
                         .From<Users>()
                         .Where(x => x.Email == myObject.Email)
-                        .Set(x => x.AuthenticationStatus, myObject.AuthenticationStatus)
+                        .Set(x => x.AuthenticationStatus, false)
                         .Set(x => x.Password!, myObject.Password)
                         .Update();
 

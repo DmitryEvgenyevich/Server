@@ -50,6 +50,7 @@ namespace Server.Tables
 
                 OnlineUsers.OnlineUsers.TryToGetValue(id, out clientSocketRecipient);
                 var stream = clientSocketRecipient?.GetStream();
+
                 if (stream != null)
                 {
                     var dataForRecipient = new
