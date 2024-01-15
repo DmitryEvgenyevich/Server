@@ -28,11 +28,8 @@ namespace Server.Tables
         [Column("Avatar")]
         public string? Avatar { get; set; }
 
-        [Column("Auth")]
-        public bool Auth { get; set; }
-        
-        [Column("AuthCode")]
-        public int AuthCode { get; set; }
+        [Column("AuthenticationStatus")]
+        public bool AuthenticationStatus { get; set; }
 
         static public async Task TryToSendToUsers(List<Users> usersList, Messages message, string Username)
         {
@@ -64,7 +61,7 @@ namespace Server.Tables
                         Username = Username
                     };
 
-                    _ = Server.Server._sendRequest(stream!, new Notification { Data = JsonConvert.SerializeObject(dataForRecipient) });
+                    _ = Server.Server.SendRequest(stream!, new Notification { Data = JsonConvert.SerializeObject(dataForRecipient) });
                 }
             });
         }
@@ -86,7 +83,7 @@ namespace Server.Tables
                         ChatName = recipientUsername,
                         ChatId = chatId
                     };
-                    _ = Server.Server._sendRequest(stream!, new Notification { Data = JsonConvert.SerializeObject(dataForRecipient) });
+                    _ = Server.Server.SendRequest(stream!, new Notification { Data = JsonConvert.SerializeObject(dataForRecipient) });
                 }
             });
         }

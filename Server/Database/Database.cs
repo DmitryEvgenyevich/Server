@@ -31,16 +31,13 @@ namespace Server.Database
             return result!;
         }
 
-        async static public Task<Users> UpdateAuthStatus(string email, bool auth)
+        async static public Task UpdateAuthStatus(int id, bool auth)
         {
             var value = await supabase!
                     .From<Users>()
-                    .Select(x => (new object[] { x.Id, x.Avatar!, x.LastLogin!, x.Email!, x.Username! }))
-                    .Where(x => x.Email == email)
-                    .Set(x => x.Auth, auth)
+                    .Where(x => x.Id == id)
+                    .Set(x => x.AuthenticationStatus, auth)
                     .Update();
-
-            return value.Model!;
         }
 
         async static public Task<Users> GetUserByEmail(string email)
@@ -75,15 +72,6 @@ namespace Server.Database
                 .Single();
 
             return result!;
-        }
-
-        async static public Task UpdateAuthCodeBysersEmail(string email, int auth_code)
-        {
-            var value = await supabase!
-                .From<Users>()
-                .Where(x => x.Email == email)
-                .Set(x => x.AuthCode, auth_code)
-                .Update();
         }
 
         async static public Task<string> GetChatsByUserId(int Id)
@@ -128,7 +116,7 @@ namespace Server.Database
         {
             var result = await supabase!
                 .From<Users>()
-                .Select(x => new object[] { x.Id, x.Username!, x.Email!, x.Auth, x.Avatar! })
+                .Select(x => new object[] { x.Id, x.Username!, x.Email!, x.AuthenticationStatus, x.Avatar! })
                 .Where(x =>
                         x.Email == email &&
                         x.Password == password
@@ -138,9 +126,9 @@ namespace Server.Database
             return result!;
         }
 
-        async static public Task<HttpResponseMessage> InsertUserToTableUsers(Users user)
+        async static public Task<Users> InsertUserToTableUsers(Users user)
         {
-            return (await supabase!.From<Users>().Insert(user!)).ResponseMessage!;
+            return (await supabase!.From<Users>().Select(x => new object[] { x.Id, x.Username!, x.Email!, x.AuthenticationStatus }).Insert(user!)).Model!;
         }
 
         async static public Task<HttpResponseMessage> UpdateAuthByEmail(string email, bool auth)
@@ -148,7 +136,7 @@ namespace Server.Database
             var value = await supabase!
                 .From<Users>()
                 .Where(x => x.Email == email)
-                .Set(x => x.Auth, auth)
+                .Set(x => x.AuthenticationStatus, auth)
                 .Update();
 
             return value.ResponseMessage!;
@@ -164,7 +152,7 @@ namespace Server.Database
             var value = await supabase!
                         .From<Users>()
                         .Where(x => x.Email == myObject.Email)
-                        .Set(x => x.Auth, myObject.Auth)
+                        .Set(x => x.AuthenticationStatus, myObject.AuthenticationStatus)
                         .Set(x => x.Password!, myObject.Password)
                         .Update();
 

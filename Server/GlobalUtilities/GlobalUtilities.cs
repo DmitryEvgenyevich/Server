@@ -14,6 +14,12 @@ namespace Server.GlobalUtilities
             return nameElement.ToString();
         }
 
+        public static int CreateRandomNumber(int num1, int num2)
+        {
+            Random random = new Random();
+            return random.Next(num1, num2);
+        }
+
         public static Response GetErrorMessage(Exception ex)
         {
             string error = TryToGetCommandFromJson(ex.Message, "details");
