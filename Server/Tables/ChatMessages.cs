@@ -3,9 +3,7 @@
     public class ChatMessages
     {   
         public string? Username;
-
         public string? Message;
-
         public DateTimeOffset? Time;
     }
 }

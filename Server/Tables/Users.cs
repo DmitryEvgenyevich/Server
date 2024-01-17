@@ -62,7 +62,7 @@ namespace Server.Tables
                         Username = Username
                     };
 
-                    _ = Server.Server.SendRequest(stream!, new Notification { Data = JsonConvert.SerializeObject(dataForRecipient) });
+                    _ = GlobalUtilities.GlobalUtilities.SendRequest(stream!, new Notification { Data = JsonConvert.SerializeObject(dataForRecipient) });
                 }
             });
         }
@@ -84,7 +84,7 @@ namespace Server.Tables
                         ChatName = recipientUsername,
                         ChatId = chatId
                     };
-                    _ = Server.Server.SendRequest(stream!, new Notification { Data = JsonConvert.SerializeObject(dataForRecipient) });
+                    _ = GlobalUtilities.GlobalUtilities.SendRequest(stream!, new Notification { Data = JsonConvert.SerializeObject(dataForRecipient) });
                 }
             });
         }

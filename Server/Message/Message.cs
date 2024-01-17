@@ -10,20 +10,16 @@ namespace Server.Message
 
     public class Response : IMessage
     {
-
         public string Type { get; set; } = "Response";
-
         public string? ErrorMessage { get; set; }
-
+        public bool SendToClient { get; set; } = true;
         public string? Data { get; set; }
     }
 
     public class Notification : IMessage
     {
         public string Type { get; set; } = "Notification";
-
         public string? TypeOfNotification { get; set; }
-
         public string? Data { get; set; }
 
     }

@@ -66,7 +66,7 @@ namespace Server.MessengerFunctionality
             {
                 Users user = JsonConvert.DeserializeObject<Users>(json)!;
 
-                await Authentication.Authentication.UpdateOrAddNewUser(user.Id, GlobalUtilities.GlobalUtilities.CreateRandomNumber(1000000, 9999999));
+                _ = Authentication.Authentication.UpdateOrAddNewUser(user.Id, GlobalUtilities.GlobalUtilities.CreateRandomNumber(1000000, 9999999));
 
                 return new Response { };
             }
@@ -82,7 +82,7 @@ namespace Server.MessengerFunctionality
             {
                 var myObject = JsonConvert.DeserializeObject<Users>(json)!;
 
-                var error = (await Authentication.Authentication.IsCodeRight_DeleteFromList(myObject.Id, JObject.Parse(json).Value<int>("AuthenticationCode"))).ErrorMessage;
+                var error = Authentication.Authentication.IsCodeRight_DeleteFromList(myObject.Id, JObject.Parse(json).Value<int>("AuthenticationCode")).ErrorMessage;
 
                 if (error != null)
                 {

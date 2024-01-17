@@ -2,17 +2,16 @@
 
 namespace Server.Authentication
 {
-    internal class Authentication
+    class Authentication
     {
-        static Dictionary<int, (int, DateTime)> _authenticationList = new Dictionary<int, (int, DateTime)>();
+        private static Dictionary<int, (int, DateTime)> _authenticationList = new Dictionary<int, (int, DateTime)>();
+        private const short WAIT_IN_MINUTES = 5;
 
-        static int waitInMinutes = 5;
-
-        static public async Task UpdateOrAddNewUser(int userId,  int code)
+        public static async Task UpdateOrAddNewUser(int userId,  int code)
         {
             await Task.Run(() =>
             {
-                DateTime time = DateTime.Now.AddMinutes(waitInMinutes);
+                DateTime time = DateTime.Now.AddMinutes(WAIT_IN_MINUTES);
 
                 if (_authenticationList.ContainsKey(userId))
                 {
@@ -21,49 +20,43 @@ namespace Server.Authentication
                 else
                 {
                     _authenticationList.Add(userId, (code, time));
-                    _ = _automaticDeletion(userId, time);
+                    _ = _startAutomaticDeletionTimer(userId, time);
                 }
             });
         }
 
-        public async static Task<Response> IsCodeRight_DeleteFromList(int userId, int code)
+        public static Response IsCodeRight_DeleteFromList(int userId, int code)
         {
-            return await Task.Run(() =>
-            {
-                if (_authenticationList.ContainsKey(userId))
-                { 
-                    if (code == _authenticationList[userId].Item1)
-                    {
-                        _authenticationList.Remove(userId);
-                        return new Response { };
-                    }
-
-                    return new Response { ErrorMessage = "Wrong code" };
-                }
-
-                return new Response { ErrorMessage = "The code is no longer valid" };
-            });
-        }
-
-        static async Task _automaticDeletion(int userId, DateTime test)
-        {
-            await Task.Run(() =>
-            {
-                while (true)
+            if (_authenticationList.ContainsKey(userId))
+            { 
+                if (code == _authenticationList[userId].Item1)
                 {
-                    Thread.Sleep(1000);
-
-                    if (DateTime.Compare(DateTime.Now, test) >= 0 && _authenticationList.ContainsKey(userId))
-                    {
-                      _authenticationList.Remove(userId);
-                        return;
-                    }
-                    else if (!_authenticationList.ContainsKey(userId))
-                    {
-                        return;
-                    }
+                    _authenticationList.Remove(userId);
+                    return new Response { };
                 }
-            });
+
+                return new Response { ErrorMessage = "Wrong code" };
+            }
+
+            return new Response { ErrorMessage = "The code is no longer valid" };
+        }
+
+        private static async Task _startAutomaticDeletionTimer(int userId, DateTime expirationTime)
+        {
+            while (true)
+            {
+                await Task.Delay(1000);
+
+                if (DateTime.Compare(DateTime.Now, expirationTime) >= 0 && _authenticationList.ContainsKey(userId))
+                {
+                    _authenticationList.Remove(userId);
+                    return;
+                }
+                else if (!_authenticationList.ContainsKey(userId))
+                {
+                    return;
+                }
+            }
         }
     }
 }
