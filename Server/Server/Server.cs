@@ -62,7 +62,7 @@ namespace Server.Server
 
             try
             {
-                while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0)
+                while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                 {
                     _ = _processCommandAndSendResponse(GlobalUtilities.GlobalUtilities.ConvertBytesToString(buffer, bytesRead), stream, clientSocket);
                 }

@@ -225,7 +225,7 @@ namespace Server.MessengerFunctionality
                     ChatId = (int)newChat.Model.Id,
                     Contact = new ContactModel(recipient),
                     ChatName = recipient.Username,
-                    Type = ChatType.Chat
+                    Type = ChatType.CHAT
                 }) };
             }
             catch (Exception ex)

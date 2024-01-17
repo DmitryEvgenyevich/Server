@@ -22,7 +22,7 @@ namespace Server.Database
       
         async static public Task SetLastMessage(int chatId, int messageId)
         {
-            var result = await supabase!
+            var result = await _supabase!
                 .From<UserChatUsers>()
                 .Where(y => y.UserChatId == chatId)
                 .Set(x => x.LastMessage!, messageId)
@@ -182,7 +182,7 @@ namespace Server.Database
 
         public static async Task<Postgrest.Responses.ModeledResponse<UserChats>> CreateNewChat()
         {
-            return await _supabase!.From<UserChats>().Insert(new UserChats { ChatType = ChatType.Chat });
+            return await _supabase!.From<UserChats>().Insert(new UserChats { ChatType = ChatType.CHAT });
         }
 
         public static async Task<Postgrest.Responses.ModeledResponse<Users>> FindUsersByUsername(string Username, int Id)
