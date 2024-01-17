@@ -19,8 +19,17 @@ namespace Server.Database
             _supabase = new Client(Environment.GetEnvironmentVariable("SUPABASE_URL")!, Environment.GetEnvironmentVariable("SUPABASE_KEY"), options);
             await _supabase.InitializeAsync();
         }
+      
+        async static public Task SetLastMessage(int chatId, int messageId)
+        {
+            var result = await supabase!
+                .From<UserChatUsers>()
+                .Where(y => y.UserChatId == chatId)
+                .Set(x => x.LastMessage!, messageId)
+                .Update();
+        }
 
-        public static async Task<Users> GetUserIdByEmail(string email)
+        async static public Task<Users> GetUserIdByEmail(string email)
         {
             var result = await _supabase!
                 .From<Users>()
