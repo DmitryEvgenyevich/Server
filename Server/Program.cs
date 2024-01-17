@@ -1,13 +1,11 @@
-﻿using Server.Authentication;
-
-namespace Server
+﻿namespace Server
 {
     class Start
     {
         static async Task Main(string[] args)
         {
-            await Database.Database.DBinit(); // Init database
-            await Server.Server._startServerAsync(); // start server
+            await Database.Database.DatabaseInit(); // Init database
+            await Server.Server.StartServerAsync(); // start server
         }
     }
 }

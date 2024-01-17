@@ -3,26 +3,24 @@ using Server.MessengerFunctionality;
 using System.Net.Sockets;
 using System.Net;
 using System.Reflection;
-using System.Text;
-using System.Text.Json;
 
 namespace Server.Server
 {
     static class Server
     {
-        public static async Task _startServerAsync()
+        public static async Task StartServerAsync()
         {
-            TcpListener serverSocket = new TcpListener(IPAddress.Any, 8000);
+            TcpListener tcpListener = new TcpListener(IPAddress.Any, 8000);
 
             try
             {
-                serverSocket.Start();
+                tcpListener.Start();
                 Console.WriteLine($"Server started. Waiting for clients...");
 
                 while (true)
                 {
-                    TcpClient clientSocket = await serverSocket.AcceptTcpClientAsync();
-                    _handleClient(clientSocket);
+                    TcpClient clientSocket = await tcpListener.AcceptTcpClientAsync();
+                    _ = _handleClient(clientSocket);
                 }
             }
             catch (Exception ex)
@@ -31,11 +29,11 @@ namespace Server.Server
             }
             finally
             {
-                serverSocket.Stop();
+                tcpListener.Stop();
             }
         }
 
-        static async void _handleClient(TcpClient clientSocket)
+        private static async Task _handleClient(TcpClient clientSocket)
         {
             try
             {
@@ -57,69 +55,50 @@ namespace Server.Server
             }
         }
 
-        static async Task _waitingForRequest(NetworkStream stream, TcpClient clientSocket)
+        private static async Task _waitingForRequest(NetworkStream stream, TcpClient clientSocket)
         {
             int bytesRead;
             byte[] buffer = new byte[1024];
 
             try
             {
-                while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0)
                 {
-                    Response response = await _tryToGetCommand(GlobalUtilities.GlobalUtilities.ConvertBytesToString(buffer, bytesRead), clientSocket);
-                    await SendRequest(stream, response);
+                    _ = _processCommandAndSendResponse(GlobalUtilities.GlobalUtilities.ConvertBytesToString(buffer, bytesRead), stream, clientSocket);
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
-                await SendRequest(stream, new Response { ErrorMessage = ex.Message });
+                _ = GlobalUtilities.GlobalUtilities.SendRequest(stream, new Response { ErrorMessage = ex.Message });
             }
         }
 
-        static async Task<Response> _tryToGetCommand(string json, TcpClient clientSocket)
+        private static async Task _processCommandAndSendResponse(string json, NetworkStream stream, TcpClient clientSocket)
         {
-            try
-            {
-                string command = GlobalUtilities.GlobalUtilities.TryToGetCommandFromJson(json, "Command").ToString();
+            string command = GlobalUtilities.GlobalUtilities.TryToGetValueFromJsonByProperty(json, "Command");
 
-                if (GlobalUtilities.GlobalUtilities.isStringEmpty(command))
+            if (GlobalUtilities.GlobalUtilities.isStringEmpty(command))
+            {
+                _ = GlobalUtilities.GlobalUtilities.SendRequest(stream, new Response { ErrorMessage = "Can not find this property" });
+            }
+            else
+            {
+                Response response = await _executeCommandAndGetResponse(json, clientSocket, command);
+                if (response.SendToClient)
                 {
-                    return new Response { ErrorMessage = "Can not find this property" };
+                    _ = GlobalUtilities.GlobalUtilities.SendRequest(stream, response);
                 }
-
-                return await _callCommand(json, clientSocket, command);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error: " + ex.Message);
-
-                return new Response { ErrorMessage = ex.Message };
             }
         }
 
-        public static async Task SendRequest(NetworkStream stream, IMessage message)
-        {
-            var options = new JsonSerializerOptions
-            {
-                Converters = { new IMessageConverter() }
-            };
-
-            string json = JsonSerializer.Serialize(message, options);
-
-            byte[] bytes = Encoding.UTF8.GetBytes(json);
-
-            await stream.WriteAsync(bytes, 0, bytes.Length);
-            await stream.FlushAsync();
-        }
-
-        static async Task<Response> _callCommand(string json, TcpClient clientSocket, string nameElement)
+        private static async Task<Response> _executeCommandAndGetResponse(string json, TcpClient clientSocket, string nameElement)
         {
             MethodInfo method = typeof(MessengerFunctionalityDesktop).GetMethod(nameElement, BindingFlags.Public | BindingFlags.Instance)!;
 
             if (method == null)
             {
-                return new Response { ErrorMessage = "Can not find this property" };
+                return new Response { ErrorMessage = $"Method '{nameElement}' not found in MessengerFunctionalityDesktop" };
             }
 
             var messengerFunctionalityInstance = new MessengerFunctionalityDesktop();
@@ -128,7 +107,7 @@ namespace Server.Server
 
             Task<Response> resultTask = (Task<Response>)method.Invoke(messengerFunctionalityInstance, parameters)!;
 
-            return await resultTask;
+            return await resultTask.ConfigureAwait(false);
         }
     }
 }
