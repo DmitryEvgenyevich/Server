@@ -5,6 +5,7 @@ namespace Server.MessengerFunctionality
 {
     internal interface IMessengerFunctionality
     {
+
         Task<Response> SignIn(TcpClient clientSocket, string json);
 
         Task<Response> SignUp(TcpClient clientSocket, string json);
@@ -28,5 +29,6 @@ namespace Server.MessengerFunctionality
         Task<Response> CreateNewChat(TcpClient clientSocket, string json);
 
         Task<Response> FindUserByUsername(TcpClient clientSocket, string json);
+
     }
 }

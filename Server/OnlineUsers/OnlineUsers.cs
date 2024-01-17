@@ -4,9 +4,9 @@ namespace Server.OnlineUsers
 {
     internal class OnlineUsers
     {
-        private static Dictionary<int, TcpClient> _onlineClients = new Dictionary<int, TcpClient>();
+        static Dictionary<int, TcpClient> _onlineClients = new Dictionary<int, TcpClient>();
 
-        private static int _getUserByTcpClient(TcpClient clientSocket)
+        static int _getUserByTcpClient(TcpClient clientSocket)
         {
             return _onlineClients.FirstOrDefault(x => x.Value == clientSocket).Key;
         }

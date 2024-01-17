@@ -66,7 +66,7 @@ namespace Server.MessengerFunctionality
             {
                 Users user = JsonConvert.DeserializeObject<Users>(json)!;
 
-                _ = Authentication.Authentication.UpdateOrAddNewUser(user.Id, GlobalUtilities.GlobalUtilities.CreateRandomNumber(1000000, 9999999));
+                await Authentication.Authentication.UpdateOrAddNewUser(user.Id, GlobalUtilities.GlobalUtilities.CreateRandomNumber(1000000, 9999999));
 
                 return new Response { };
             }
@@ -82,7 +82,7 @@ namespace Server.MessengerFunctionality
             {
                 var myObject = JsonConvert.DeserializeObject<Users>(json)!;
 
-                var error = Authentication.Authentication.IsCodeRight_DeleteFromList(myObject.Id, JObject.Parse(json).Value<int>("AuthenticationCode")).ErrorMessage;
+                var error = (await Authentication.Authentication.IsCodeRight_DeleteFromList(myObject.Id, JObject.Parse(json).Value<int>("AuthenticationCode"))).ErrorMessage;
 
                 if (error != null)
                 {
@@ -190,12 +190,12 @@ namespace Server.MessengerFunctionality
                 _ = OnlineUsers.OnlineUsers.DeleteUserFromOnlineList(clientSocket);
                 Console.WriteLine("Client disconnected.");
 
-                return new Response { SendToClient = false };
+                return new Response { };
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
-                return new Response { ErrorMessage = ex.Message, SendToClient = false };
+                return new Response { ErrorMessage = ex.Message };
             }
         }
 

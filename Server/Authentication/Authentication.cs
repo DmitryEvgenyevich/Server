@@ -2,16 +2,17 @@
 
 namespace Server.Authentication
 {
-    class Authentication
+    internal class Authentication
     {
-        private static Dictionary<int, (int, DateTime)> _authenticationList = new Dictionary<int, (int, DateTime)>();
-        private const short WAIT_IN_MINUTES = 5;
+        static Dictionary<int, (int, DateTime)> _authenticationList = new Dictionary<int, (int, DateTime)>();
 
-        public static async Task UpdateOrAddNewUser(int userId,  int code)
+        static int waitInMinutes = 5;
+
+        static public async Task UpdateOrAddNewUser(int userId,  int code)
         {
             await Task.Run(() =>
             {
-                DateTime time = DateTime.Now.AddMinutes(WAIT_IN_MINUTES);
+                DateTime time = DateTime.Now.AddMinutes(waitInMinutes);
 
                 if (_authenticationList.ContainsKey(userId))
                 {
@@ -20,43 +21,49 @@ namespace Server.Authentication
                 else
                 {
                     _authenticationList.Add(userId, (code, time));
-                    _ = _startAutomaticDeletionTimer(userId, time);
+                    _ = _automaticDeletion(userId, time);
                 }
             });
         }
 
-        public static Response IsCodeRight_DeleteFromList(int userId, int code)
+        public async static Task<Response> IsCodeRight_DeleteFromList(int userId, int code)
         {
-            if (_authenticationList.ContainsKey(userId))
-            { 
-                if (code == _authenticationList[userId].Item1)
-                {
-                    _authenticationList.Remove(userId);
-                    return new Response { };
+            return await Task.Run(() =>
+            {
+                if (_authenticationList.ContainsKey(userId))
+                { 
+                    if (code == _authenticationList[userId].Item1)
+                    {
+                        _authenticationList.Remove(userId);
+                        return new Response { };
+                    }
+
+                    return new Response { ErrorMessage = "Wrong code" };
                 }
 
-                return new Response { ErrorMessage = "Wrong code" };
-            }
-
-            return new Response { ErrorMessage = "The code is no longer valid" };
+                return new Response { ErrorMessage = "The code is no longer valid" };
+            });
         }
 
-        private static async Task _startAutomaticDeletionTimer(int userId, DateTime expirationTime)
+        static async Task _automaticDeletion(int userId, DateTime test)
         {
-            while (true)
+            await Task.Run(() =>
             {
-                await Task.Delay(1000);
+                while (true)
+                {
+                    Thread.Sleep(1000);
 
-                if (DateTime.Compare(DateTime.Now, expirationTime) >= 0 && _authenticationList.ContainsKey(userId))
-                {
-                    _authenticationList.Remove(userId);
-                    return;
+                    if (DateTime.Compare(DateTime.Now, test) >= 0 && _authenticationList.ContainsKey(userId))
+                    {
+                      _authenticationList.Remove(userId);
+                        return;
+                    }
+                    else if (!_authenticationList.ContainsKey(userId))
+                    {
+                        return;
+                    }
                 }
-                else if (!_authenticationList.ContainsKey(userId))
-                {
-                    return;
-                }
-            }
+            });
         }
     }
 }
