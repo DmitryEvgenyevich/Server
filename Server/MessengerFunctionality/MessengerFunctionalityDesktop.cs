@@ -190,12 +190,12 @@ namespace Server.MessengerFunctionality
                 _ = OnlineUsers.OnlineUsers.DeleteUserFromOnlineList(clientSocket);
                 Console.WriteLine("Client disconnected.");
 
-                return new Response { };
+                return new Response { SendToClient = false };
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
-                return new Response { ErrorMessage = ex.Message };
+                return new Response { ErrorMessage = ex.Message, SendToClient = false };
             }
         }
 
