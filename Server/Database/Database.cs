@@ -152,9 +152,9 @@ namespace Server.Database
             return value.ResponseMessage!;
         }
 
-        public static async Task InsertMessageToTableMessages(Messages message)
+        async static public Task<Postgrest.Responses.ModeledResponse<Messages>> InsertMessageToTableMessages(Messages message)
         {
-            _ = await _supabase!.From<Messages>().Insert(message!);
+            return await _supabase!.From<Messages>().Select(x => new object[] { x.Id }).Insert(message!);
         }
 
         public static async Task<HttpResponseMessage> UpdatePassword(Users myObject)
