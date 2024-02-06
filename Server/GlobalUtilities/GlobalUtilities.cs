@@ -1,4 +1,5 @@
-﻿using Server.Message;
+﻿using Newtonsoft.Json;
+using Server.Message;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
@@ -11,14 +12,13 @@ namespace Server.GlobalUtilities
         {
             JsonDocument jsonDocument = JsonDocument.Parse(json);
             JsonElement root = jsonDocument.RootElement;
-            root.TryGetProperty(property, out JsonElement nameElement);
+            root.TryGetProperty(property, out var nameElement);
             return nameElement.ToString();
         }
 
         public static int CreateRandomNumber(int num1, int num2)
         {
-            Random random = new Random();
-            return random.Next(num1, num2);
+            return new Random().Next(num1, num2);
         }
 
         public static async Task SendRequest(NetworkStream stream, IMessage message)
@@ -28,7 +28,7 @@ namespace Server.GlobalUtilities
                 Converters = { new IMessageConverter() }
             };
 
-            string json = JsonSerializer.Serialize(message, options);
+            string json = JsonConvert.SerializeObject(message);
 
             byte[] bytes = Encoding.UTF8.GetBytes(json);
 
@@ -36,19 +36,19 @@ namespace Server.GlobalUtilities
             await stream.FlushAsync();
         }
 
-        public static Response GetErrorMessage(Exception ex)
+        public static string GetErrorMessage(Exception ex)
         {
             string error = TryToGetValueFromJsonByProperty(ex.Message, "details");
 
             if (error.ToString() != "" || error.ToString() != null)
-                return new Response { ErrorMessage = error };
+                return error ;
 
             error = TryToGetValueFromJsonByProperty(ex.Message, "message");
 
             if (error.ToString() != "")
-                return new Response { ErrorMessage = ex.Message };
+                return ex.Message ;
 
-            return new Response { ErrorMessage = ex.Message };
+            return "Error";
         }
 
         public static string ConvertBytesToString(byte[] buffer, int bytesRead)

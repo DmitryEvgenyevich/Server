@@ -4,6 +4,6 @@
     {
         public Messages? Messages { get; set; }
         public Users? Users { get; set; }
-        public UserChats? UserChats { get; set; }
+        public Chats? Chats { get; set; }
     }
 }

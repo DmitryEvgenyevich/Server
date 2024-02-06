@@ -3,12 +3,11 @@ using Postgrest.Models;
 
 namespace Server.Tables
 {
-    [Table("UserChatUsers")]
-    class UserChatUsers : BaseModel
+    [Table("UsersChats")]
+    class UsersChats : BaseModel
     {
-
-        [PrimaryKey("UserChatId", true)]
-        public int UserChatId { get; set; }
+        [PrimaryKey("ChatId", true)]
+        public int ChatId { get; set; }
 
         [PrimaryKey("UserId", true)]
         public int UserId { get; set; }
@@ -16,5 +15,7 @@ namespace Server.Tables
         [Column("LastMessage")]
         public int? LastMessage { get; set; }
 
+        [Column("CountOfUnreadMessages")]
+        public int CountOfUnreadMessages { get; set; }
     }
 }

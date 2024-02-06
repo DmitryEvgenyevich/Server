@@ -55,14 +55,13 @@ namespace Server.Tables
                 {
                     var dataForRecipient = new
                     {
-                        Command = "NewMessage",
                         Time = message.Time,
                         Message = message.Message,
                         ChatId = message.UserChatId,
                         Username = Username
                     };
 
-                    _ = GlobalUtilities.GlobalUtilities.SendRequest(stream!, new Notification { Data = JsonConvert.SerializeObject(dataForRecipient) });
+                    _ = GlobalUtilities.GlobalUtilities.SendRequest(stream!, new Notification { Data = JsonConvert.SerializeObject(dataForRecipient), TypeOfNotification = Enum.NotificationTypes.NewMessage });
                 }
             });
         }
@@ -80,11 +79,10 @@ namespace Server.Tables
                 {
                     var dataForRecipient = new
                     {
-                        Command = "NewChat",
                         ChatName = recipientUsername,
                         ChatId = chatId
                     };
-                    _ = GlobalUtilities.GlobalUtilities.SendRequest(stream!, new Notification { Data = JsonConvert.SerializeObject(dataForRecipient) });
+                    _ = GlobalUtilities.GlobalUtilities.SendRequest(stream!, new Notification { Data = JsonConvert.SerializeObject(dataForRecipient), TypeOfNotification = Enum.NotificationTypes.NewChat });
                 }
             });
         }

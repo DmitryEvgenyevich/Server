@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using Server.Message;
 using Server.Tables;
 using System.Net.Sockets;
+using Server.Enum;
 
 namespace Server.MessengerFunctionality
 {
@@ -38,7 +39,7 @@ namespace Server.MessengerFunctionality
             }
             catch (Exception ex)
             {
-                return GlobalUtilities.GlobalUtilities.GetErrorMessage(ex);
+                return new Response { ErrorMessage = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex) };
             }
         }
 
@@ -46,33 +47,33 @@ namespace Server.MessengerFunctionality
         {
             try
             {
-                var user = JsonConvert.DeserializeObject<Users>(json);
+                var userId = JObject.Parse(json).Value<int>("Id");
 
-                _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(user!.Id, clientSocket);
+                _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(userId, clientSocket);
 
-                var chatData = System.Text.Json.JsonSerializer.Deserialize<List<ChatData>>(await Database.Database.GetChatsByUserId(user!.Id));
+                var chatData = System.Text.Json.JsonSerializer.Deserialize<List<ChatData>>(await Database.Database.GetChatsByUserId(userId));
 
                 return new Response { Data = JsonConvert.SerializeObject(ChatDataToIChatModels.Convert(chatData!)) };
             }
             catch (Exception ex)
             {
-                return GlobalUtilities.GlobalUtilities.GetErrorMessage(ex);
+                return new Response { ErrorMessage = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex) };
             }
         }
 
-        public async Task<Response> SendNewCode(TcpClient clientSocket, string json)
+        public async Task<IMessage> SendNewCode(TcpClient clientSocket, string json)
         {
             try
             {
-                Users user = JsonConvert.DeserializeObject<Users>(json)!;
+                var userId = JObject.Parse(json).Value<int>("Id");
 
-                _ = Authentication.Authentication.UpdateOrAddNewUser(user.Id, GlobalUtilities.GlobalUtilities.CreateRandomNumber(1000000, 9999999));
+                _ = Authentication.Authentication.UpdateOrAddNewUser(userId, GlobalUtilities.GlobalUtilities.CreateRandomNumber(1000000, 9999999));
 
-                return new Response { };
+                return new Response { SendToClient = false };
             }
             catch (Exception ex)
             {
-                return GlobalUtilities.GlobalUtilities.GetErrorMessage(ex);
+                return new Notification { Data = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex), TypeOfNotification = Enum.NotificationTypes.Error };
             }
         }
 
@@ -97,7 +98,7 @@ namespace Server.MessengerFunctionality
             }
             catch (Exception ex)
             {
-                return GlobalUtilities.GlobalUtilities.GetErrorMessage(ex);
+                return new Response { ErrorMessage = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex) };
             }
         }
 
@@ -113,7 +114,7 @@ namespace Server.MessengerFunctionality
             }
             catch (Exception ex)
             {
-                return GlobalUtilities.GlobalUtilities.GetErrorMessage(ex);
+                return new Response { ErrorMessage = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex) };
             }
         }
 
@@ -129,34 +130,32 @@ namespace Server.MessengerFunctionality
                                             .ConvertAll(wrapper => wrapper.Users);
 
                 _ = Users.TryToSendToUsers(usersList!, message, JObject.Parse(json).Value<string>("SenderUsername")!);
+                _ = Database.Database.SetLastMessage(message.UserChatId, (await Database.Database.InsertMessageToTableMessages(message)).Model!.Id);
 
-                _ = Database.Database.InsertMessageToTableMessages(message);
-
-                return new Response { };
+                return new Response { SendToClient = false };
             }
             catch (Exception ex)
             {
-                return GlobalUtilities.GlobalUtilities.GetErrorMessage(ex);
+                return new Response { ErrorMessage = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex) };
             }
         }
 
-        public async Task<Response> SendMessageInChat(TcpClient clientSocket, string json)
+        public async Task<IMessage> SendMessageInChat(TcpClient clientSocket, string json)
         {
             try
             {
                 var message = JsonConvert.DeserializeObject<Messages>(json)!;
 
                 _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(message.SenderId, clientSocket);
-
                 _ = Users.TryToSendToUser(JObject.Parse(json).Value<int>("RecipientId"), message, JObject.Parse(json).Value<string>("SenderUsername")!);
 
                 _ = Database.Database.SetLastMessage(message.UserChatId, (await Database.Database.InsertMessageToTableMessages(message)).Model!.Id);
 
-                return new Response { };
+                return new Response { SendToClient = false };
             }
             catch (Exception ex)
             {
-                return GlobalUtilities.GlobalUtilities.GetErrorMessage(ex);
+                return new Notification { Data = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex), TypeOfNotification = Enum.NotificationTypes.Error };
             }
         }
 
@@ -172,14 +171,15 @@ namespace Server.MessengerFunctionality
 
                 foreach (var item in jsonArray)
                 {
-                    chatMessages.Add(new ChatMessages { Message = item["Message"]!.ToString(), Username = item["Users"]!["Username"]!.ToString(), Time = DateTimeOffset.Parse(item["Time"]!.ToString()) });
+                    System.Enum.TryParse<StatusesOfMessage>(item["StatusOfMessage"]!.ToString(), out var messageType);
+                    chatMessages.Add(new ChatMessages { Message = item["Message"]!.ToString(), Username = item["Users"]!["Username"]!.ToString(), Time = DateTimeOffset.Parse(item["Time"]!.ToString()), StatusOfMessage = messageType });
                 }
 
                 return new Response { Data = JsonConvert.SerializeObject(chatMessages) };
             }
             catch (Exception ex)
             {
-                return GlobalUtilities.GlobalUtilities.GetErrorMessage(ex);
+                return new Response { ErrorMessage = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex) };
             }
         }
 
@@ -211,10 +211,10 @@ namespace Server.MessengerFunctionality
 
                 var recipient = await Database.Database.GetUserByUsername(dataForNewChat.RecipientUsername!);
 
-                _ = Database.Database.CreateChatConnection(new List<UserChatUsers>
+                _ = Database.Database.CreateChatConnection(new List<UsersChats>
                     {
-                        new UserChatUsers{UserChatId = (int)newChat.Model!.Id, UserId = dataForNewChat.SenderId},
-                        new UserChatUsers{UserChatId = (int)newChat.Model.Id, UserId = recipient.Id}
+                        new UsersChats{ChatId = (int)newChat.Model!.Id, UserId = dataForNewChat.SenderId},
+                        new UsersChats{ChatId = (int)newChat.Model.Id, UserId = recipient.Id}
                     }
                 );
 
@@ -225,12 +225,12 @@ namespace Server.MessengerFunctionality
                     ChatId = (int)newChat.Model.Id,
                     Contact = new ContactModel(recipient),
                     ChatName = recipient.Username,
-                    Type = ChatType.CHAT
+                    Type = TypesOfChat.CHAT
                 }) };
             }
             catch (Exception ex)
             {
-                return GlobalUtilities.GlobalUtilities.GetErrorMessage(ex);
+                return new Response { ErrorMessage = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex) };
             }
         }
 
@@ -255,7 +255,7 @@ namespace Server.MessengerFunctionality
             }
             catch (Exception ex)
             {
-                return GlobalUtilities.GlobalUtilities.GetErrorMessage(ex);
+                return new Response { ErrorMessage = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex) };
             }
         }
     }
