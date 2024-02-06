@@ -11,7 +11,7 @@ namespace Server.MessengerFunctionality
 
         Task<Response> GetMyContacts(TcpClient clientSocket, string json);
 
-        Task<Response> SendNewCode(TcpClient clientSocket, string json);
+        Task<IMessage> SendNewCode(TcpClient clientSocket, string json);
 
         Task<Response> IsCodeRight(TcpClient clientSocket, string json);
 
@@ -19,7 +19,7 @@ namespace Server.MessengerFunctionality
 
         Task<Response> SendMessageInGroup(TcpClient clientSocket, string json);
 
-        Task<Response> SendMessageInChat(TcpClient clientSocket, string json);
+        Task<IMessage> SendMessageInChat(TcpClient clientSocket, string json);
 
         Task<Response> GetMessagesByContact(TcpClient clientSocket, string json);
 

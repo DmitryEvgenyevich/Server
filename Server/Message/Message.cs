@@ -1,16 +1,18 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using Server.Enum;
 
 namespace Server.Message
 {
     public interface IMessage
     {
-        string Type { get; set; }
+        TypesIMessage Type { get; set; }
+        string? Data { get; set; }
     }
 
     public class Response : IMessage
     {
-        public string Type { get; set; } = "Response";
+        public TypesIMessage Type { get; set; } = TypesIMessage.Response;
         public string? ErrorMessage { get; set; }
         public bool SendToClient { get; set; } = true;
         public string? Data { get; set; }
@@ -18,8 +20,8 @@ namespace Server.Message
 
     public class Notification : IMessage
     {
-        public string Type { get; set; } = "Notification";
-        public string? TypeOfNotification { get; set; }
+        public TypesIMessage Type { get; set; } = TypesIMessage.Notification;
+        public NotificationTypes TypeOfNotification { get; set; }
         public string? Data { get; set; }
 
     }
@@ -34,14 +36,14 @@ namespace Server.Message
 
                 if (root.TryGetProperty("Type", out var typeProperty))
                 {
-                    string messageType = typeProperty.GetString()!;
+                    System.Enum.TryParse<TypesIMessage>(typeProperty.ToString(), out var messageType);
 
                     switch (messageType)
                     {
-                        case "Response":
+                        case TypesIMessage.Response:
                             return JsonSerializer.Deserialize<Response>(root.GetRawText())!;
 
-                        case "Notification":
+                        case TypesIMessage.Notification:
                             return JsonSerializer.Deserialize<Notification>(root.GetRawText())!;
 
                         default:
@@ -62,37 +64,26 @@ namespace Server.Message
 
             writer.WriteStartObject();
 
+            writer.WriteStartObject(value.GetType().Name);
+
             writer.WritePropertyName("Type");
-            writer.WriteStringValue(value.Type);
+            writer.WriteStringValue(value.Type.ToString());
 
             if (value is Response response)
             {
-                if (response.ErrorMessage != null)
-                {
-                    writer.WritePropertyName("ErrorMessage");
-                    writer.WriteStringValue(response.ErrorMessage);
-                }
+                writer.WritePropertyName("ErrorMessage");
+                writer.WriteStringValue(response.ErrorMessage);
 
-                if (response.Data != null)
-                {
-                    writer.WritePropertyName("Data");
-                    writer.WriteStringValue(response.Data);
-                }
+                writer.WritePropertyName("Data");
+                writer.WriteStringValue(response.Data);
             }
-
             else if (value is Notification notification)
             {
-                if (notification.TypeOfNotification != null)
-                {
-                    writer.WritePropertyName("TypeOfNotification");
-                    writer.WriteStringValue(notification.TypeOfNotification);
-                }
-                
-                if (notification.Data != null)
-                {
-                    writer.WritePropertyName("Data");
-                    writer.WriteStringValue(notification.Data);
-                }
+                writer.WritePropertyName("TypeOfNotification");
+                writer.WriteStringValue(notification.TypeOfNotification.ToString());
+
+                writer.WritePropertyName("Data");
+                writer.WriteStringValue(notification.Data);
             }
             else
             {

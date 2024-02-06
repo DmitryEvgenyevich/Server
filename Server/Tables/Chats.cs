@@ -3,14 +3,14 @@ using Postgrest.Models;
 
 namespace Server.Tables
 {
-    [Table("UserChats")]
-    class UserChats : BaseModel
+    [Table("Chats")]
+    class Chats : BaseModel
     {
         [PrimaryKey("Id", false)]
         public int Id { get; set; }
 
         [Column("ChatType")]
-        public ChatType ChatType { get; set; }
+        public TypesOfChat ChatType { get; set; }
 
         [Column("ChatName")]
         public string? ChatName { get; set; }
