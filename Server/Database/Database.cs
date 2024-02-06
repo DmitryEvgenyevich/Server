@@ -175,7 +175,7 @@ namespace Server.Database
         {
             var messages = await _database!
                     .From<Messages>()
-                    .Select("Users:SenderId(Username), Time, Message")
+                    .Select("Users:SenderId(Username), Time, Message, StatusOfMessage")
                     .Where(x => x.UserChatId == chatId)
                     .Get();
 
