@@ -177,7 +177,7 @@ namespace Server.Database
                     .From<Messages>()
                     .Select("Users:SenderId(Username), Time, Message, StatusOfMessage")
                     .Where(x => x.UserChatId == chatId)
-                    .Order("Messages", "Time", Ordering.Descending)
+                    .Order("Time", Ordering.Ascending)
                     .Get();
 
             return messages.Content!;
