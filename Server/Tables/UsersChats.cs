@@ -14,8 +14,5 @@ namespace Server.Tables
 
         [Column("LastMessage")]
         public int? LastMessage { get; set; }
-
-        [Column("CountOfUnreadMessages")]
-        public int CountOfUnreadMessages { get; set; }
     }
 }

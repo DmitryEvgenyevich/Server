@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Server.Tables;
 using Supabase;
+using Supabase.Interfaces;
 using static Postgrest.Constants;
 
 namespace Server.Database
@@ -20,9 +21,9 @@ namespace Server.Database
             await _database.InitializeAsync();
         }
 
-        async static public Task SetLastMessage(int chatId, int messageId)
+        async static public Task SetLastMessage(int chatId, int messageId, int senderId)
         {
-            var result = await _database!
+            var usersChats = await _database!
                 .From<UsersChats>()
                 .Where(y => y.ChatId == chatId)
                 .Set(x => x.LastMessage!, messageId)

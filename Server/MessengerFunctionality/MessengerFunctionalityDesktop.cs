@@ -130,7 +130,7 @@ namespace Server.MessengerFunctionality
                                             .ConvertAll(wrapper => wrapper.Users);
 
                 _ = Users.TryToSendToUsers(usersList!, message, JObject.Parse(json).Value<string>("SenderUsername")!);
-                _ = Database.Database.SetLastMessage(message.UserChatId, (await Database.Database.InsertMessageToTableMessages(message)).Model!.Id);
+                _ = Database.Database.SetLastMessage(message.UserChatId, (await Database.Database.InsertMessageToTableMessages(message)).Model!.Id, message.SenderId);
 
                 return new Response { SendToClient = false };
             }
@@ -149,7 +149,7 @@ namespace Server.MessengerFunctionality
                 _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(message.SenderId, clientSocket);
                 _ = Users.TryToSendToUser(JObject.Parse(json).Value<int>("RecipientId"), message, JObject.Parse(json).Value<string>("SenderUsername")!);
 
-                _ = Database.Database.SetLastMessage(message.UserChatId, (await Database.Database.InsertMessageToTableMessages(message)).Model!.Id);
+                _ = Database.Database.SetLastMessage(message.UserChatId, (await Database.Database.InsertMessageToTableMessages(message)).Model!.Id, message.SenderId);
 
                 return new Response { SendToClient = false };
             }
