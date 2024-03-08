@@ -6,30 +6,26 @@ using System.Net.Sockets;
 
 namespace Server.Tables
 {
-    [Table("Users")]
+    [Table("users")]
     internal class Users : BaseModel
     {
 
-        [PrimaryKey("Id", false)]
+        [PrimaryKey("id", false)]
         public int Id { get; set; }
 
-        [Column("Username")]
+        [Column("username")]
         public string? Username { get; set; }
 
-        [Column("Email")]
+        [Column("email")]
         public string? Email { get; set; }
 
-        [Column("Password")]
+        [Column("password")]
         public string? Password { get; set; }
 
-        [Column("LastLogin")]
+        [Column("last_login")]
         public DateTimeOffset? LastLogin { get; set; }
 
-        [Column("Avatar")]
-        public string? Avatar { get; set; }
-
-        [Column("AuthenticationStatus")]
-        public bool AuthenticationStatus { get; set; }
+        public byte[]? Avatar { get; set; }
 
         static public async Task TryToSendToUsers(List<Users> usersList, Messages message, string Username)
         {

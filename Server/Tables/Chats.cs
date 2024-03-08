@@ -1,22 +1,22 @@
 ﻿using Postgrest.Attributes;
 using Postgrest.Models;
 
+enum TypesOfChat
+{
+    PRIVATE_CHAT = 1,
+    GROUP = 2,
+    CHANNEL = 3
+}
+
 namespace Server.Tables
 {
-    [Table("Chats")]
+    [Table("chats")]
     class Chats : BaseModel
     {
-        [PrimaryKey("Id", false)]
+        [PrimaryKey("id", false)]
         public int Id { get; set; }
 
-        [Column("ChatType")]
-        public TypesOfChat ChatType { get; set; }
-
-        [Column("ChatName")]
-        public string? ChatName { get; set; }
-
-        [Column("Avatar")]
-        public string? Avatar { get; set; }
-
+        [Column("type_id")]
+        public TypesOfChat type { get; set; }
     }
 }

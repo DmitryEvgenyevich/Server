@@ -28,5 +28,7 @@ namespace Server.MessengerFunctionality
         Task<Response> CreateNewChat(TcpClient clientSocket, string json);
 
         Task<Response> FindUserByUsername(TcpClient clientSocket, string json);
+
+        Task<Response> SignInByToken(TcpClient clientSocket, string json);
     }
 }

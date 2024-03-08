@@ -3,25 +3,44 @@ using Newtonsoft.Json;
 using Server.Message;
 using Server.Tables;
 using System.Net.Sockets;
-using Server.Enum;
 
 namespace Server.MessengerFunctionality
 {
-    public class MessengerFunctionalityDesktop : IMessengerFunctionality
+    public class MessengerFunctionalityDesktop /*: IMessengerFunctionality*/
     {
+        public async Task<Response> SignInByToken(TcpClient clientSocket, string json)
+        {
+            try
+            {
+                var deserialized_devise = JsonConvert.DeserializeObject<Devises>(json);
+                var result = await Database.Database.GetUserByDeviseToken(deserialized_devise!.token!);
+
+                if (result?.Id == null)
+                    return new Response { };
+
+                if (System.IO.File.Exists(@$"avatars\{result.Id}.png"))
+                {
+                    byte[] imageData = File.ReadAllBytes(@$"avatars\{result.Id}.png");
+                    result.Avatar = imageData;
+                }
+
+                return new Response { Data = JsonConvert.SerializeObject(result) };
+            }
+            catch (Exception ex)
+            {
+                return new Response { ErrorMessage = ex.Message };
+            }
+        }
+
         public async Task<Response> SignIn(TcpClient clientSocket, string json)
         {
             try
             {
-                var user = JsonConvert.DeserializeObject<Users>(json);
-
-                var result = await Database.Database.GetUserByEmailAndPassword(user?.Email!, user?.Password!);
+                var deserialized_user = JsonConvert.DeserializeObject<Users>(json);
+                var result = await Database.Database.GetUserByEmailAndPassword(deserialized_user!.Email!, deserialized_user?.Password!);
 
                 if (result?.Id == null)
                     return new Response { ErrorMessage = "We can not to find this user, Email or password is not right" };
-
-                if (result.AuthenticationStatus)
-                   _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(result.Id, clientSocket);
 
                 return new Response { Data = JsonConvert.SerializeObject(result) };
             }
@@ -35,7 +54,11 @@ namespace Server.MessengerFunctionality
         {
             try
             {
-                return new Response { Data = JsonConvert.SerializeObject(await Database.Database.InsertUserToTableUsers(JsonConvert.DeserializeObject<Users>(json)!)) };
+                var deserialized_user = JsonConvert.DeserializeObject<Users>(json);
+                var new_user = await Database.Database.InsertUserToTableUsers(deserialized_user!);
+                var serialized_new_user = JsonConvert.SerializeObject(new_user);
+
+                return new Response { Data = serialized_new_user };
             }
             catch (Exception ex)
             {
@@ -50,10 +73,7 @@ namespace Server.MessengerFunctionality
                 var userId = JObject.Parse(json).Value<int>("Id");
 
                 _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(userId, clientSocket);
-
-                var chatData = System.Text.Json.JsonSerializer.Deserialize<List<ChatData>>(await Database.Database.GetChatsByUserId(userId));
-
-                return new Response { Data = JsonConvert.SerializeObject(ChatDataToIChatModels.Convert(chatData!)) };
+                return new Response { Data = await Database.Database.GetChatsByUserId(userId) };
             }
             catch (Exception ex)
             {
@@ -64,7 +84,7 @@ namespace Server.MessengerFunctionality
         public async Task<IMessage> SendNewCode(TcpClient clientSocket, string json)
         {
             try
-            {
+            {       
                 var userId = JObject.Parse(json).Value<int>("Id");
 
                 _ = Authentication.Authentication.UpdateOrAddNewUser(userId, GlobalUtilities.GlobalUtilities.CreateRandomNumber(1000000, 9999999));
@@ -81,20 +101,22 @@ namespace Server.MessengerFunctionality
         {
             try
             {
-                var myObject = JsonConvert.DeserializeObject<Users>(json)!;
+                var deserializedUser = JsonConvert.DeserializeObject<Users>(json)!;
+                var authenticationCode = JObject.Parse(json).Value<int>("AuthenticationCode");
 
-                var error = Authentication.Authentication.IsCodeRight_DeleteFromList(myObject.Id, JObject.Parse(json).Value<int>("AuthenticationCode")).ErrorMessage;
+                var error = Authentication.Authentication.IsCodeRight_DeleteFromList(deserializedUser.Id, authenticationCode).ErrorMessage;
 
                 if (error != null)
                 {
                     return new Response { ErrorMessage = error };
                 }
 
-                _ = Database.Database.UpdateAuthStatus(myObject.Id, true);
+                var token = Guid.NewGuid().ToString();
+                _ = Database.Database.AddNewDevise(new Devises{ token = token, user_id = deserializedUser.Id });
 
-                _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(myObject.Id, clientSocket);
+                _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(deserializedUser.Id, clientSocket);
 
-                return new Response { };
+                return new Response { Data = token };
             }
             catch (Exception ex)
             {
@@ -102,161 +124,161 @@ namespace Server.MessengerFunctionality
             }
         }
 
-        public async Task<Response> UpdatePassword(TcpClient clientSocket, string json)
-        {
-            try
-            {
-                var user = JsonConvert.DeserializeObject<Users>(json)!;
+        //public async Task<Response> UpdatePassword(TcpClient clientSocket, string json)
+        //{
+        //    try
+        //    {
+        //        var user = JsonConvert.DeserializeObject<Users>(json)!;
 
-                await Database.Database.UpdatePassword(user);
+        //        await Database.Database.UpdatePassword(user);
 
-                return new Response { };
-            }
-            catch (Exception ex)
-            {
-                return new Response { ErrorMessage = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex) };
-            }
-        }
+        //        return new Response { };
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return new Response { ErrorMessage = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex) };
+        //    }
+        //}
 
-        public async Task<Response> SendMessageInGroup(TcpClient clientSocket, string json)
-        {
-            try
-            {
-                var message = JsonConvert.DeserializeObject<Messages>(json)!;
+        //public async Task<Response> SendMessageInGroup(TcpClient clientSocket, string json)
+        //{
+        //    try
+        //    {
+        //        var message = JsonConvert.DeserializeObject<Messages>(json)!;
 
-                _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(message.SenderId, clientSocket);
+        //        _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(message.SenderId, clientSocket);
 
-                var usersList = JsonConvert.DeserializeObject<List<Wrapper>>(await Database.Database.GetContactsIdsByChatId(message.UserChatId, message.SenderId))!
-                                            .ConvertAll(wrapper => wrapper.Users);
+        //        var usersList = JsonConvert.DeserializeObject<List<Wrapper>>(await Database.Database.GetContactsIdsByChatId(message.UserChatId, message.SenderId))!
+        //                                    .ConvertAll(wrapper => wrapper.Users);
 
-                _ = Users.TryToSendToUsers(usersList!, message, JObject.Parse(json).Value<string>("SenderUsername")!);
-                _ = Database.Database.SetLastMessage(message.UserChatId, (await Database.Database.InsertMessageToTableMessages(message)).Model!.Id, message.SenderId);
+        //        _ = Users.TryToSendToUsers(usersList!, message, JObject.Parse(json).Value<string>("SenderUsername")!);
+        //        _ = Database.Database.SetLastMessage(message.UserChatId, (await Database.Database.InsertMessageToTableMessages(message)).Model!.Id, message.SenderId);
 
-                return new Response { SendToClient = false };
-            }
-            catch (Exception ex)
-            {
-                return new Response { ErrorMessage = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex) };
-            }
-        }
+        //        return new Response { SendToClient = false };
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return new Response { ErrorMessage = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex) };
+        //    }
+        //}
 
-        public async Task<IMessage> SendMessageInChat(TcpClient clientSocket, string json)
-        {
-            try
-            {
-                var message = JsonConvert.DeserializeObject<Messages>(json)!;
+        //public async Task<IMessage> SendMessageInChat(TcpClient clientSocket, string json)
+        //{
+        //    try
+        //    {
+        //        var message = JsonConvert.DeserializeObject<Messages>(json)!;
 
-                _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(message.SenderId, clientSocket);
-                _ = Users.TryToSendToUser(JObject.Parse(json).Value<int>("RecipientId"), message, JObject.Parse(json).Value<string>("SenderUsername")!);
+        //        _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(message.SenderId, clientSocket);
+        //        _ = Users.TryToSendToUser(JObject.Parse(json).Value<int>("RecipientId"), message, JObject.Parse(json).Value<string>("SenderUsername")!);
 
-                _ = Database.Database.SetLastMessage(message.UserChatId, (await Database.Database.InsertMessageToTableMessages(message)).Model!.Id, message.SenderId);
+        //        _ = Database.Database.SetLastMessage(message.UserChatId, (await Database.Database.InsertMessageToTableMessages(message)).Model!.Id, message.SenderId);
 
-                return new Response { SendToClient = false };
-            }
-            catch (Exception ex)
-            {
-                return new Notification { Data = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex), TypeOfNotification = Enum.NotificationTypes.Error };
-            }
-        }
+        //        return new Response { SendToClient = false };
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return new Notification { Data = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex), TypeOfNotification = Enum.NotificationTypes.Error };
+        //    }
+        //}
 
-        public async Task<Response> GetMessagesByContact(TcpClient clientSocket, string json)
-        {
-            try
-            {
-                _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(JObject.Parse(json).Value<int>("UserId"), clientSocket);
+        //public async Task<Response> GetMessagesByContact(TcpClient clientSocket, string json)
+        //{
+        //    try
+        //    {
+        //        _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(JObject.Parse(json).Value<int>("UserId"), clientSocket);
 
-                List<ChatMessages> chatMessages = new List<ChatMessages>();
+        //        List<ChatMessages> chatMessages = new List<ChatMessages>();
 
-                var jsonArray = JArray.Parse(await Database.Database.GetMessagesByChatId(JObject.Parse(json).Value<int>("UserChatId")));
+        //        var jsonArray = JArray.Parse(await Database.Database.GetMessagesByChatId(JObject.Parse(json).Value<int>("UserChatId")));
 
-                foreach (var item in jsonArray)
-                {
-                    System.Enum.TryParse<StatusesOfMessage>(item["StatusOfMessage"]!.ToString(), out var messageType);
-                    chatMessages.Add(new ChatMessages { Message = item["Message"]!.ToString(), Username = item["Users"]!["Username"]!.ToString(), Time = DateTimeOffset.Parse(item["Time"]!.ToString()), StatusOfMessage = messageType });
-                }
+        //        foreach (var item in jsonArray)
+        //        {
+        //            System.Enum.TryParse<StatusesOfMessage>(item["StatusOfMessage"]!.ToString(), out var messageType);
+        //            chatMessages.Add(new ChatMessages { Message = item["Message"]!.ToString(), Username = item["Users"]!["Username"]!.ToString(), Time = DateTimeOffset.Parse(item["Time"]!.ToString()), StatusOfMessage = messageType });
+        //        }
 
-                return new Response { Data = JsonConvert.SerializeObject(chatMessages) };
-            }
-            catch (Exception ex)
-            {
-                return new Response { ErrorMessage = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex) };
-            }
-        }
+        //        return new Response { Data = JsonConvert.SerializeObject(chatMessages) };
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return new Response { ErrorMessage = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex) };
+        //    }
+        //}
 
-        public Response logOut(TcpClient clientSocket, string json)
-        {
-            try
-            {
-                _ = OnlineUsers.OnlineUsers.DeleteUserFromOnlineList(clientSocket);
-                Console.WriteLine("Client disconnected.");
+        //public Response logOut(TcpClient clientSocket, string json)
+        //{
+        //    try
+        //    {
+        //        _ = OnlineUsers.OnlineUsers.DeleteUserFromOnlineList(clientSocket);
+        //        Console.WriteLine("Client disconnected.");
 
-                return new Response { SendToClient = false };
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-                return new Response { ErrorMessage = ex.Message, SendToClient = false };
-            }
-        }
+        //        return new Response { SendToClient = false };
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine(ex.Message);
+        //        return new Response { ErrorMessage = ex.Message, SendToClient = false };
+        //    }
+        //}
 
-        public async Task<Response> CreateNewChat(TcpClient clientSocket, string json)
-        {
-            try
-            {
-                var dataForNewChat = JsonConvert.DeserializeObject<NewChat>(json);
+        //public async Task<Response> CreateNewChat(TcpClient clientSocket, string json)
+        //{
+        //    try
+        //    {
+        //        var dataForNewChat = JsonConvert.DeserializeObject<NewChat>(json);
 
-                _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(dataForNewChat!.SenderId, clientSocket);
-                
-                var newChat = await Database.Database.CreateNewChat();
+        //        _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(dataForNewChat!.SenderId, clientSocket);
 
-                var recipient = await Database.Database.GetUserByUsername(dataForNewChat.RecipientUsername!);
+        //        var newChat = await Database.Database.CreateNewChat();
 
-                _ = Database.Database.CreateChatConnection(new List<UsersChats>
-                    {
-                        new UsersChats{ChatId = (int)newChat.Model!.Id, UserId = dataForNewChat.SenderId},
-                        new UsersChats{ChatId = (int)newChat.Model.Id, UserId = recipient.Id}
-                    }
-                );
+        //        var recipient = await Database.Database.GetUserByUsername(dataForNewChat.RecipientUsername!);
 
-                _ = Users.TryToSendNotification(recipient.Id, (int)newChat.Model.Id, (await Database.Database.GetUserById(dataForNewChat.SenderId)).Username!);
+        //        _ = Database.Database.CreateChatConnection(new List<UsersChats>
+        //            {
+        //                new UsersChats{ChatId = (int)newChat.Model!.Id, UserId = dataForNewChat.SenderId},
+        //                new UsersChats{ChatId = (int)newChat.Model.Id, UserId = recipient.Id}
+        //            }
+        //        );
 
-                return new Response { Data = JsonConvert.SerializeObject(new ChatModel
-                {
-                    ChatId = (int)newChat.Model.Id,
-                    Contact = new ContactModel(recipient),
-                    ChatName = recipient.Username,
-                    Type = TypesOfChat.CHAT
-                }) };
-            }
-            catch (Exception ex)
-            {
-                return new Response { ErrorMessage = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex) };
-            }
-        }
+        //        _ = Users.TryToSendNotification(recipient.Id, (int)newChat.Model.Id, (await Database.Database.GetUserById(dataForNewChat.SenderId)).Username!);
 
-        public async Task<Response> FindUserByUsername(TcpClient clientSocket, string json)
-        {
-            try
-            {
-                var user = JsonConvert.DeserializeObject<Users>(json);
+        //        return new Response { Data = JsonConvert.SerializeObject(new ChatModel
+        //        {
+        //            ChatId = (int)newChat.Model.Id,
+        //            Contact = new ContactModel(recipient),
+        //            ChatName = recipient.Username,
+        //            Type = TypesOfChat.CHAT
+        //        }) };
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return new Response { ErrorMessage = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex) };
+        //    }
+        //}
 
-                _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(user!.Id, clientSocket);
+        //public async Task<Response> FindUserByUsername(TcpClient clientSocket, string json)
+        //{
+        //    try
+        //    {
+        //        var user = JsonConvert.DeserializeObject<Users>(json);
 
-                var users = await Database.Database.FindUsersByUsername(user.Username!, user.Id);
+        //        _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(user!.Id, clientSocket);
 
-                List<object> findUsers = new List<object>();
+        //        var users = await Database.Database.FindUsersByUsername(user.Username!, user.Id);
 
-                foreach (var item in JArray.Parse(users.Content!))
-                {
-                    findUsers.Add(new { ChatName = item["Username"]!.ToString() });
-                }
+        //        List<object> findUsers = new List<object>();
 
-                return new Response { Data = JsonConvert.SerializeObject(findUsers) };
-            }
-            catch (Exception ex)
-            {
-                return new Response { ErrorMessage = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex) };
-            }
-        }
+        //        foreach (var item in JArray.Parse(users.Content!))
+        //        {
+        //            findUsers.Add(new { ChatName = item["Username"]!.ToString() });
+        //        }
+
+        //        return new Response { Data = JsonConvert.SerializeObject(findUsers) };
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return new Response { ErrorMessage = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex) };
+        //    }
+        //}
     }
 }

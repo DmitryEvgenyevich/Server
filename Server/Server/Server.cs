@@ -76,7 +76,7 @@ namespace Server.Server
 
         private static async Task _processCommandAndSendResponse(string json, NetworkStream stream, TcpClient clientSocket)
         {
-            string command = GlobalUtilities.GlobalUtilities.TryToGetValueFromJsonByProperty(json, "Command");
+            string command = GlobalUtilities.GlobalUtilities.TryToGetValueFromJsonByProperty(json, "command");
 
             if (GlobalUtilities.GlobalUtilities.isStringEmpty(command))
             {

@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Server.Message;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
@@ -16,6 +17,15 @@ namespace Server.GlobalUtilities
             return nameElement.ToString();
         }
 
+        public static string HashString(string input)
+        {
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                byte[] hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
+                string hash = BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
+                return hash;
+            }
+        }
         public static int CreateRandomNumber(int num1, int num2)
         {
             return new Random().Next(num1, num2);
