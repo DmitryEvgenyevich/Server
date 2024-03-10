@@ -17,7 +17,7 @@ namespace Server.Database
 
         public static async Task DatabaseInit()
         {
-            _database = new Client(Environment.GetEnvironmentVariable("SUPABASE_URL")!, Environment.GetEnvironmentVariable("SUPABASE_KEY"), options);
+            _database = new Client(Environment.GetEnvironmentVariable("SUPABASE_URL_OLD")!, Environment.GetEnvironmentVariable("SUPABASE_KEY_OLD"), options);
             await _database.InitializeAsync();
         }
 
