@@ -22,6 +22,9 @@ namespace Server.Tables
         [Column("password")]
         public string? Password { get; set; }
 
+        [Column("description")]
+        public string? Description { get; set; }
+
         [Column("last_login")]
         public DateTimeOffset? LastLogin { get; set; }
 

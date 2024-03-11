@@ -181,29 +181,21 @@ namespace Server.MessengerFunctionality
         //    }
         //}
 
-        //public async Task<Response> GetMessagesByContact(TcpClient clientSocket, string json)
-        //{
-        //    try
-        //    {
-        //        _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(JObject.Parse(json).Value<int>("UserId"), clientSocket);
+        public async Task<Response> GetMessagesByChat(TcpClient clientSocket, string json)
+        {
+            try
+            {
+                _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(JObject.Parse(json).Value<int>("UserId"), clientSocket);
 
-        //        List<ChatMessages> chatMessages = new List<ChatMessages>();
+                var temp = await Database.Database.GetMessagesByChatId(JObject.Parse(json).Value<int>("user_chat_id"));
 
-        //        var jsonArray = JArray.Parse(await Database.Database.GetMessagesByChatId(JObject.Parse(json).Value<int>("UserChatId")));
-
-        //        foreach (var item in jsonArray)
-        //        {
-        //            System.Enum.TryParse<StatusesOfMessage>(item["StatusOfMessage"]!.ToString(), out var messageType);
-        //            chatMessages.Add(new ChatMessages { Message = item["Message"]!.ToString(), Username = item["Users"]!["Username"]!.ToString(), Time = DateTimeOffset.Parse(item["Time"]!.ToString()), StatusOfMessage = messageType });
-        //        }
-
-        //        return new Response { Data = JsonConvert.SerializeObject(chatMessages) };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return new Response { ErrorMessage = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex) };
-        //    }
-        //}
+                return new Response { Data = temp };
+            }
+            catch (Exception ex)
+            {
+                return new Response { ErrorMessage = GlobalUtilities.GlobalUtilities.GetErrorMessage(ex) };
+            }
+        }
 
         //public Response logOut(TcpClient clientSocket, string json)
         //{

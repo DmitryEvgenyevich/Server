@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using NAudio.Midi;
+using Newtonsoft.Json;
 using Server.Tables;
 using Supabase;
 using System.Reflection;
@@ -99,7 +100,8 @@ namespace Server.Database
 
         public static async Task<string> GetChatsByUserId(int Id)
         {
-            return (await _database!.Rpc("get_user_chats", new Dictionary<string, object> { { "temp", Id } })).Content!;
+            var temp = (await _database!.Rpc("get_chat_data", new Dictionary<string, object> { { "id_of_user", Id } })).Content!;
+            return temp;
         }
 
         public static async Task SetNewLastLoginById(int userId, DateTimeOffset time)
@@ -173,17 +175,11 @@ namespace Server.Database
         //    return value.ResponseMessage!;
         //}
 
-        //public static async Task<string> GetMessagesByChatId(int chatId)
-        //{
-        //    var messages = await _database!
-        //            .From<Messages>()
-        //            .Select("Users:SenderId(Username), Time, Message, StatusOfMessage")
-        //            .Where(x => x.UserChatId == chatId)
-        //            .Order("Time", Ordering.Ascending)
-        //            .Get();
-
-        //    return messages.Content!;
-        //}
+        public static async Task<string> GetMessagesByChatId(int chatId)
+        {
+            var temp = (await _database!.Rpc("get_messages_and_read_status", new Dictionary<string, object> { { "chat_user_id", chatId } })).Content!;
+            return temp;
+        }
 
         //public static async Task<Postgrest.Responses.ModeledResponse<Chats>> CreateNewChat()
         //{
