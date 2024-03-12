@@ -100,8 +100,7 @@ namespace Server.Database
 
         public static async Task<string> GetChatsByUserId(int Id)
         {
-            var temp = (await _database!.Rpc("get_chat_data", new Dictionary<string, object> { { "id_of_user", Id } })).Content!;
-            return temp;
+            return (await _database!.Rpc("get_chat_data", new Dictionary<string, object> { { "id_of_user", Id } })).Content!;
         }
 
         public static async Task SetNewLastLoginById(int userId, DateTimeOffset time)
@@ -113,16 +112,11 @@ namespace Server.Database
                     .Update();
         }
 
-        //public static async Task<string> GetContactsIdsByChatId(int chatId, int userId)
-        //{
-        //    var chat = await _database!
-        //        .From<UsersChats>()
-        //        .Select("Users:UserId(Id)")
-        //        .Where(x => x.ChatId == chatId && x.UserId != userId)
-        //        .Get();
-
-        //    return chat!.Content!;
-        //}
+        public static async Task<string> GetContactsIdsByUserChatId(int userChatId, int userId)
+        {
+            var tenmp = (await _database!.Rpc("get_users_in_same_chat", new Dictionary<string, object> { { "userid", userId }, { "userchatid", userChatId } })).Content!;
+            return tenmp;
+        }
 
         public static async Task<Users> GetUserByEmailAndPassword(string email, string password)
         {
@@ -177,8 +171,7 @@ namespace Server.Database
 
         public static async Task<string> GetMessagesByChatId(int chatId)
         {
-            var temp = (await _database!.Rpc("get_messages_and_read_status", new Dictionary<string, object> { { "chat_user_id", chatId } })).Content!;
-            return temp;
+            return (await _database!.Rpc("get_messages_and_read_status", new Dictionary<string, object> { { "chat_user_id", chatId } })).Content!;
         }
 
         //public static async Task<Postgrest.Responses.ModeledResponse<Chats>> CreateNewChat()

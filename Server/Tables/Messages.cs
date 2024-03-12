@@ -4,31 +4,23 @@ using Server.Enum;
 
 namespace Server.Tables
 {
-    [Table("Messages")]
+    [Table("messages")]
     internal class Messages : BaseModel
     {
-        [PrimaryKey("Id", false)]
+        [PrimaryKey("id", false)]
         public int Id { get; set; }
 
-        [Column("SenderId")]
-        public int SenderId { get; set; }
-
-        [Column("Message")]
-        public string? Message { get; set; }
-
-        [Column("Time")]
-        public DateTime Time { get; set; }
-
-        [Column("UserChatId")]
+        [Column("user_chat_id")]
         public int UserChatId { get; set; }
 
-        [Column("StatusOfMessage")]
-        public StatusesOfMessage StatusOfMessage { get; set; }
+        [Column("text")]
+        public string? Text { get; set; }
 
-        [Column("TypeOfMessage")]
-        public TypesOfMessage TypeOfMessage { get; set; }
+        [Column("sent_at")]
+        public DateTime SentAt { get; set; }
 
-        [Column("FileId")]
-        public int? FileId { get; set; }
+        [Column("type_id")]
+        public TypesOfMessage type_id { get; set; }
+
     }
 }

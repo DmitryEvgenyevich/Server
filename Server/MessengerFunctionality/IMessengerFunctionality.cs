@@ -15,19 +15,15 @@ namespace Server.MessengerFunctionality
 
         Task<Response> IsCodeRight(TcpClient clientSocket, string json);
 
-        Task<Response> UpdatePassword(TcpClient clientSocket, string json);
+        //Task<Response> UpdatePassword(TcpClient clientSocket, string json);
 
-        Task<Response> SendMessageInGroup(TcpClient clientSocket, string json);
+        Task<Response> SendMessage(TcpClient clientSocket, string json);
 
-        Task<IMessage> SendMessageInChat(TcpClient clientSocket, string json);
+        //Response logOut(TcpClient clientSocket, string json);
 
-        Task<Response> GetMessagesByContact(TcpClient clientSocket, string json);
+        //Task<Response> CreateNewChat(TcpClient clientSocket, string json);
 
-        Response logOut(TcpClient clientSocket, string json);
-
-        Task<Response> CreateNewChat(TcpClient clientSocket, string json);
-
-        Task<Response> FindUserByUsername(TcpClient clientSocket, string json);
+        //Task<Response> FindUserByUsername(TcpClient clientSocket, string json);
 
         Task<Response> SignInByToken(TcpClient clientSocket, string json);
     }

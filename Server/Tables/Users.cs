@@ -54,8 +54,8 @@ namespace Server.Tables
                 {
                     var dataForRecipient = new
                     {
-                        Time = message.Time,
-                        Message = message.Message,
+                        Time = message.SentAt,
+                        Message = message.Text,
                         ChatId = message.UserChatId,
                         Username = Username
                     };
