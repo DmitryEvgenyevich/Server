@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using Server.Message;
 using Server.Tables;
 using System.Net.Sockets;
+using Server.Enum;
 
 namespace Server.MessengerFunctionality
 {
@@ -148,11 +149,20 @@ namespace Server.MessengerFunctionality
 
                 _ = OnlineUsers.OnlineUsers.AddUserToList_IfUserIsNotInOnlineList(JObject.Parse(json).Value<int>("SenderId"), clientSocket);
 
-                var usersList = JsonConvert.DeserializeObject<List<Wrapper>>(await Database.Database.GetContactsIdsByUserChatId(message.UserChatId, JObject.Parse(json).Value<int>("SenderId")))!
-                                            .ConvertAll(wrapper => wrapper.Users);
+                var usersList = await Database.Database.GetContactsIdsByUserChatId(message.UserChatId, JObject.Parse(json).Value<int>("SenderId"));
 
-                _ = Users.TryToSendToUsers(usersList!, message, JObject.Parse(json).Value<string>("SenderUsername")!);
-                //_ = Database.Database.SetLastMessage(message.UserChatId, (await Database.Database.InsertMessageToTableMessages(message)).Model!.Id, message.SenderId);
+                JArray jsonArray = JArray.Parse(usersList);
+                int[] userIds = new int[jsonArray.Count];
+
+                for (int i = 0; i < jsonArray.Count; i++)
+                {
+                    userIds[i] = (int)jsonArray[i]["user_id"];
+                }
+
+                message.SentAt = DateTimeOffset.Now;
+                message.type_id = TypesOfMessage.TEXT;
+                await Users.TryToSendToUsers(userIds!, message, JObject.Parse(json).Value<string>("SenderUsername")!, JObject.Parse(json).Value<int>("chat_id"));
+                await Database.Database.SetLastMessage(message.UserChatId, (await Database.Database.InsertMessageToTableMessages(message)).Model!.Id);
 
                 return new Response { SendToClient = false };
             }

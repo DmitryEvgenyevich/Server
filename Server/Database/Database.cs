@@ -22,14 +22,14 @@ namespace Server.Database
             await _database.InitializeAsync();
         }
 
-        //async static public Task SetLastMessage(int chatId, int messageId, int senderId)
-        //{
-        //    var usersChats = await _database!
-        //        .From<UsersChats>()
-        //        .Where(y => y.ChatId == chatId)
-        //        .Set(x => x.LastMessage!, messageId)
-        //        .Update();
-        //}
+        async static public Task SetLastMessage(int chatId, int messageId)
+        {
+            var usersChats = await _database!
+                .From<UsersChats>()
+                .Where(y => y.chat_id == chatId)
+                .Set(x => x.first_unread_message_id!, messageId)
+                .Update();
+        }
 
         //async static public Task<Users> GetUserIdByEmail(string email)
         //{
@@ -152,10 +152,10 @@ namespace Server.Database
         //    return value.ResponseMessage!;
         //}
 
-        //async static public Task<Postgrest.Responses.ModeledResponse<Messages>> InsertMessageToTableMessages(Messages message)
-        //{
-        //    return await _database!.From<Messages>().Select(x => new object[] { x.Id }).Insert(message!);
-        //}
+        async static public Task<Postgrest.Responses.ModeledResponse<Messages>> InsertMessageToTableMessages(Messages message)
+        {
+            return await _database!.From<Messages>().Select(x => new object[] { x.Id }).Insert(message!);
+        }
 
         //public static async Task<HttpResponseMessage> UpdatePassword(Users myObject)
         //{

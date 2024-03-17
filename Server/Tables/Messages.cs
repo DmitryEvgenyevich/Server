@@ -17,7 +17,7 @@ namespace Server.Tables
         public string? Text { get; set; }
 
         [Column("sent_at")]
-        public DateTime SentAt { get; set; }
+        public DateTimeOffset SentAt { get; set; }
 
         [Column("type_id")]
         public TypesOfMessage type_id { get; set; }

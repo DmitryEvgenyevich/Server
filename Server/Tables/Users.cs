@@ -30,18 +30,18 @@ namespace Server.Tables
 
         public byte[]? Avatar { get; set; }
 
-        static public async Task TryToSendToUsers(List<Users> usersList, Messages message, string Username)
+        static public async Task TryToSendToUsers(int[] userIdArray, Messages message, string Username, int chat_id)
         {
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
-                foreach (var item in usersList)
+                foreach (dynamic id in userIdArray)
                 {
-                    _ = TryToSendToUser(item.Id, message, Username);
+                    await TryToSendToUser(id, message, Username, chat_id);
                 }
             });
         }
 
-        static public async Task TryToSendToUser(int id, Messages message, string Username)
+        static public async Task TryToSendToUser(int id, Messages message, string Username, int chat_id)
         {
             await Task.Run(() =>
             {
@@ -54,10 +54,10 @@ namespace Server.Tables
                 {
                     var dataForRecipient = new
                     {
-                        Time = message.SentAt,
-                        Message = message.Text,
-                        ChatId = message.UserChatId,
-                        Username = Username
+                        sent_at = message.SentAt,
+                        text = message.Text,
+                        chat_id = chat_id,
+                        username = Username
                     };
 
                     _ = GlobalUtilities.GlobalUtilities.SendRequest(stream!, new Notification { Data = JsonConvert.SerializeObject(dataForRecipient), TypeOfNotification = Enum.NotificationTypes.NewMessage });

@@ -2,7 +2,9 @@
 {
     public enum TypesOfMessage
     {
-        MESSAGE = 1,
-        FILE = 2
+        FILE = 1,
+        TEXT = 2,
+        TEXT_WITH_FILE = 3,
+        IMAGE = 4,
     }
 }
